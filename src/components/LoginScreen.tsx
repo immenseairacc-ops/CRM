@@ -4,14 +4,6 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { CrmDatabase, User } from '@/types/crm';
 
-const DEMO_QUICK_ACCOUNTS = [
-  { label: 'Admin (Vikram)', email: 'admin@immenseair.in' },
-  { label: 'Account Mgr (Neha)', email: 'neha.am@immenseair.in' },
-  { label: 'Agent (Rahul)', email: 'rahul.sales@immenseair.in' },
-  { label: 'Support (Karan)', email: 'support@immenseair.in' },
-  { label: 'Billing (Sneha)', email: 'billing@immenseair.in' },
-];
-
 export function LoginScreen({
   onLoginSuccess,
 }: {
@@ -142,29 +134,6 @@ export function LoginScreen({
           >
             {loading ? 'Signing In...' : 'Sign In to Workspace'}
           </button>
-
-          {/* Quick Demo Credentials Helper */}
-          <div className="pt-3 border-t border-slate-100">
-            <div className="text-[10px] font-extrabold text-[#0F2A5F] uppercase tracking-wider mb-2">
-              Quick Fill Demo Accounts (Password: 123456)
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {DEMO_QUICK_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.email}
-                  type="button"
-                  onClick={() => {
-                    setEmail(acc.email);
-                    setPassword('123456');
-                    setError('');
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-[#0A1B3F] hover:text-white text-[#0A1B3F] text-[11px] font-bold border border-slate-200 transition"
-                >
-                  {acc.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </form>
       </div>
     </div>
