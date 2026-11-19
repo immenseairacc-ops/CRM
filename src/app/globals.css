@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#f5f8fd] text-slate-900 antialiased;
+    font-family: "Google Sans", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+}
+
+/* Custom sleek scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================================
+   Quotation App Pixel-Perfect A4 & UI Styles (matching quotation-secure-app)
+   ============================================================ */
+:root {
+  --brand-navy: #0f2a5f;
+  --brand-navy-deep: #0a1b3f;
+  --brand-orange: #f2591f;
+  --brand-ink: #3c4a63;
+  --brand-grey: #f4f6fa;
+  --brand-grey-line: #dfe4ee;
+  --shadow-page: 0 24px 60px -20px rgba(15, 42, 95, 0.35);
+  --shadow-panel: 0 4px 20px -2px rgba(15, 42, 95, 0.08);
+}
+
+.font-display {
+  font-family: Archivo, Poppins, sans-serif !important;
+}
+
+.a4-page {
+  width: 210mm;
+  height: 297mm;
+  color: var(--brand-navy);
+  break-after: page;
+  page-break-after: always;
+  background: #fff;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  font-family: Poppins, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.a4-page:last-child {
+  break-after: auto;
+  page-break-after: auto;
+}
+
+.shadow-page {
+  box-shadow: var(--shadow-page);
+}
+
+.shadow-panel {
+  box-shadow: var(--shadow-panel);
+}
+
+.focus-target {
+  cursor: pointer;
+  border-radius: 1.5mm;
+  transition: box-shadow 0.25s, background-color 0.25s;
+}
+
+.focus-glow {
+  animation: 2s ease-out focus-glow;
+}
+
+@keyframes focus-glow {
+  0%, 70% {
+    background-color: rgba(242, 89, 31, 0.12);
+    box-shadow: 0 0 0 1.2mm rgba(242, 89, 31, 0.45);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 transparent;
+  }
+}
+
+.preview-scroller {
+  scroll-behavior: smooth;
+}
+
+/* Brand Colors */
+.text-navy {
+  color: var(--brand-navy);
+}
+.bg-navy {
+  background-color: var(--brand-navy);
+}
+.border-navy {
+  border-color: var(--brand-navy);
+}
+.bg-brand-grey {
+  background-color: var(--brand-grey);
+}
+.border-brand-line {
+  border-color: var(--brand-grey-line);
+}
+.text-brand-ink {
+  color: var(--brand-ink);
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  html, body {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  #print-root {
+    position: absolute !important;
+    inset: 0 !important;
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .print-area-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+  #print-root .page-scaler {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    zoom: 1 !important;
+    gap: 0 !important;
+    padding: 0 !important;
+  }
+  .a4-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .focus-target, .focus-glow {
+    box-shadow: none !important;
+    background-color: transparent !important;
+    animation: none !important;
+  }
+}
+
