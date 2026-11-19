@@ -291,9 +291,17 @@ export default function CrmAppPage() {
   if (!authChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-        <div className="text-center space-y-2">
-          <div className="w-9 h-9 border-4 border-[#F2591F] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm font-medium text-[#0A1B3F]">
+        <div className="text-center space-y-3">
+          <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+            <div className="absolute inset-0 rounded-2xl border-4 border-[#F2591F]/25 border-t-[#F2591F] animate-spin" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/immense-logo.jpg"
+              alt="Immense Air Pvt Ltd"
+              className="w-14 h-14 rounded-xl object-contain bg-white p-1 shadow-sm"
+            />
+          </div>
+          <p className="text-xs font-bold text-[#0A1B3F] tracking-wide">
             Loading Immense Air CRM...
           </p>
         </div>
@@ -308,9 +316,17 @@ export default function CrmAppPage() {
   if (loading || !db || !currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-        <div className="text-center space-y-2">
-          <div className="w-9 h-9 border-4 border-[#F2591F] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm font-medium text-[#0A1B3F]">
+        <div className="text-center space-y-3">
+          <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+            <div className="absolute inset-0 rounded-2xl border-4 border-[#F2591F]/25 border-t-[#F2591F] animate-spin" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/immense-logo.jpg"
+              alt="Immense Air Pvt Ltd"
+              className="w-14 h-14 rounded-xl object-contain bg-white p-1 shadow-sm"
+            />
+          </div>
+          <p className="text-xs font-bold text-[#0A1B3F] tracking-wide">
             Loading Immense Air CRM...
           </p>
         </div>
