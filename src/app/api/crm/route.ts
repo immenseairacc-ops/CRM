@@ -2,9 +2,9 @@ import { getEmailTransporter } from '@/lib/mailer';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createSeedDatabase,
-  readDatabase,
+  readDatabaseAsync,
   sanitizeForRole,
-  writeDatabase,
+  writeDatabaseAsync,
 } from '@/lib/db';
 import {
   BillingType,
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     const role: Role = VALID_ROLES.includes(roleParam) ? roleParam : 'ADMIN';
     const userId = searchParams.get('userId') || undefined;
 
-    const db = readDatabase();
+    const db = await readDatabaseAsync();
     const sanitized = sanitizeForRole(db, role, userId);
 
     return NextResponse.json({ ok: true, data: sanitized });
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       payload?: Record<string, any>;
     };
 
-    const db = readDatabase();
+    const db = await readDatabaseAsync();
 
     if (action === 'LOGIN') {
       const emailInput = String(payload.email || '').trim().toLowerCase();
@@ -2590,7 +2590,7 @@ export async function POST(req: NextRequest) {
 
       case 'RESET_DEMO_DATA': {
         const fresh = createSeedDatabase();
-        writeDatabase(fresh);
+        await writeDatabaseAsync(fresh);
         return NextResponse.json({
           ok: true,
           data: sanitizeForRole(fresh, actorRole, actor.id),
@@ -2604,7 +2604,7 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    writeDatabase(db);
+    await writeDatabaseAsync(db);
     return NextResponse.json({
       ok: true,
       data: sanitizeForRole(db, actorRole, actor.id),

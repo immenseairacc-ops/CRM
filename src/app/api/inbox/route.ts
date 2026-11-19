@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ImapFlow } from 'imapflow';
 import { simpleParser, ParsedMail } from 'mailparser';
-import { readDatabase } from '@/lib/db';
+import { readDatabaseAsync } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,7 +87,7 @@ export async function GET(req: Request) {
   // Never leak another user's or global env mailbox when userId is provided without mailConfig!
   if (userId) {
     try {
-      const db = readDatabase();
+      const db = await readDatabaseAsync();
       const matchedUser = db.users.find((u) => u.id === userId);
       if (matchedUser?.mailConfig?.email && matchedUser?.mailConfig?.password) {
         user = matchedUser.mailConfig.email;

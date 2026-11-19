@@ -683,6 +683,67 @@ export function writeDatabase(db: CrmDatabase): void {
   }
 }
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+export async function readDatabaseAsync(): Promise<CrmDatabase> {
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/crm_state?id=eq.main&select=data`,
+        {
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+          },
+          cache: 'no-store',
+        }
+      );
+      if (res.ok) {
+        const rows = (await res.json()) as Array<{ data: CrmDatabase }>;
+        if (rows.length > 0 && rows[0].data) {
+          cachedDb = rows[0].data;
+          return rows[0].data;
+        }
+        // Seed initial database into Supabase if table is empty
+        const seed = createSeedDatabase();
+        await writeDatabaseAsync(seed);
+        return seed;
+      }
+    } catch (err) {
+      console.error('Supabase read fallback to local:', err);
+    }
+  }
+  return readDatabase();
+}
+
+export async function writeDatabaseAsync(db: CrmDatabase): Promise<void> {
+  cachedDb = db;
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/crm_state`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          id: 'main',
+          data: db,
+          updated_at: new Date().toISOString(),
+        }),
+      });
+      return;
+    } catch (err) {
+      console.error('Supabase write fallback to local:', err);
+    }
+  }
+  writeDatabase(db);
+}
+
 export function sanitizeForRole(
   db: CrmDatabase,
   role: Role,
