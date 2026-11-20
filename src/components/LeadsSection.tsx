@@ -1160,7 +1160,7 @@ ${dynamicSignature}`;
                               className="fixed inset-0 z-30"
                               onClick={() => setOpenActionMenuId(null)}
                             />
-                            <div className="absolute right-0 top-9 z-40 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 text-left space-y-0.5">
+                            <div className="absolute right-full top-0 mr-2 z-40 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 text-left space-y-0.5">
                               {isManager && lead.assignedToAgentId !== currentUser.id && (
                                 <button
                                   type="button"
