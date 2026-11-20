@@ -170,6 +170,7 @@ export function MeetsSection({
   const [anydeskAddress, setAnydeskAddress] = useState('');
   const [ultraviewerId, setUltraviewerId] = useState('');
   const [ultraviewerPassword, setUltraviewerPassword] = useState('');
+  const [offlineLocation, setOfflineLocation] = useState('');
   const [agenda, setAgenda] = useState('');
 
   const [approveTargetId, setApproveTargetId] = useState<string | null>(null);
@@ -199,6 +200,10 @@ export function MeetsSection({
 
   const handleSubmitMeet = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (platform === 'Offline Meet' && !offlineLocation.trim()) {
+      alert('Please enter the meeting location for Offline Meet.');
+      return;
+    }
     const ok = await onAction('CREATE_MEET', {
       leadId: leadId || hotLeads[0]?.id || allLeads[0]?.id,
       scheduledDate,
@@ -208,6 +213,7 @@ export function MeetsSection({
       anydeskAddress: platform === 'AnyDesk' ? anydeskAddress : undefined,
       ultraviewerId: platform === 'UltraViewer' ? ultraviewerId : undefined,
       ultraviewerPassword: platform === 'UltraViewer' ? ultraviewerPassword : undefined,
+      offlineLocation: platform === 'Offline Meet' ? offlineLocation.trim() : undefined,
       agenda,
     });
     if (ok) {
@@ -218,6 +224,7 @@ export function MeetsSection({
       setAnydeskAddress('');
       setUltraviewerId('');
       setUltraviewerPassword('');
+      setOfflineLocation('');
     }
   };
 
@@ -772,12 +779,29 @@ export function MeetsSection({
               <option value="Zoom">Zoom Meet</option>
               <option value="Microsoft Teams">Microsoft Teams</option>
               <option value="UltraViewer">UltraViewer (Remote Screen Share)</option>
+              <option value="Offline Meet">Offline Meet (In-Person Visit)</option>
               <option value="AnyDesk">AnyDesk (Remote Screen Share)</option>
               <option value="Phone Conference">Phone Conference / Direct Call</option>
             </select>
           </div>
 
           {/* Conditional Input based on platform */}
+          {platform === 'Offline Meet' && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+              <label className="text-xs font-bold text-amber-900 uppercase block">
+                Offline Meet Location / Address *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Client Office, Andheri East, Mumbai (or full address)"
+                value={offlineLocation}
+                onChange={(e) => setOfflineLocation(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-white border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+              />
+            </div>
+          )}
+
           {(platform === 'Google Meet' || platform === 'Zoom' || platform === 'Microsoft Teams') && (
             <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1">
               <label className="block text-xs font-bold text-indigo-950">

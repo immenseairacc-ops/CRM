@@ -812,6 +812,7 @@ export async function POST(req: NextRequest) {
           anydeskAddress: payload.anydeskAddress ? String(payload.anydeskAddress).trim() : undefined,
           ultraviewerId: payload.ultraviewerId ? String(payload.ultraviewerId).trim() : undefined,
           ultraviewerPassword: payload.ultraviewerPassword ? String(payload.ultraviewerPassword).trim() : undefined,
+          offlineLocation: payload.offlineLocation ? String(payload.offlineLocation).trim() : undefined,
           agenda: String(payload.agenda || 'Technical & Commercial Walkthrough'),
           status: 'PENDING_APPROVAL' as const,
           createdAt: now,
@@ -825,9 +826,17 @@ export async function POST(req: NextRequest) {
           );
         }
 
+        if (meet.platform === 'Offline Meet' && !meet.offlineLocation) {
+          return NextResponse.json(
+            { ok: false, error: 'Location is mandatory for Offline Meet.' },
+            { status: 400 }
+          );
+        }
+
         let connectionDetail = '';
         if (meet.meetLink) connectionDetail = ` [Link: ${meet.meetLink}]`;
         else if (meet.anydeskAddress) connectionDetail = ` [AnyDesk: ${meet.anydeskAddress}]`;
+        else if (meet.offlineLocation) connectionDetail = ` [Location: ${meet.offlineLocation}]`;
         else if (meet.ultraviewerId) connectionDetail = ` [UltraViewer ID: ${meet.ultraviewerId} / Pass: ${meet.ultraviewerPassword || '-'}]`;
 
         db.meetRequests.unshift(meet);
