@@ -1522,7 +1522,8 @@ export function OverviewSection({
         </div>
       </div>
 
-      {/* Support Tickets (Ticket Rise) Overview Widget */}
+      {/* Support Tickets (Ticket Rise) Overview Widget (Hidden for Support role) */}
+      {!isSupport && (
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2.5">
@@ -1685,6 +1686,7 @@ export function OverviewSection({
           </div>
         </div>
       </div>
+      )}
 
       {/* Team Disposition Breakdown for Admin & Account Manager */}
       {isManager && (
