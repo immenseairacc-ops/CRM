@@ -790,6 +790,22 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case 'ASSIGN_LEAD': {
+        const lead = db.leads.find((l) => l.id === payload.leadId);
+        if (!lead) {
+          return NextResponse.json({ ok: false, error: 'Lead not found.' }, { status: 404 });
+        }
+        const agent = db.users.find((u) => u.id === payload.agentId);
+        if (!agent) {
+          return NextResponse.json({ ok: false, error: 'Assignee user not found.' }, { status: 404 });
+        }
+        lead.assignedToAgentId = agent.id;
+        lead.assignedToAgentName = agent.name;
+        lead.updatedAt = now;
+        await writeDatabaseAsync(db);
+        return NextResponse.json({ ok: true, data: db, message: `Lead assigned to ${agent.name}` });
+      }
+
       case 'CREATE_MEET': {
         const lead = db.leads.find((l) => l.id === payload.leadId);
         if (!lead) {
