@@ -1161,6 +1161,22 @@ ${dynamicSignature}`;
                               onClick={() => setOpenActionMenuId(null)}
                             />
                             <div className="absolute right-0 top-9 z-40 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 text-left space-y-0.5">
+                              {isManager && lead.assignedToAgentId !== currentUser.id && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    setOpenActionMenuId(null);
+                                    await onAction('ASSIGN_LEAD', {
+                                      leadId: lead.id,
+                                      agentId: currentUser.id,
+                                    });
+                                  }}
+                                  className="w-full px-3 py-2 rounded-xl hover:bg-indigo-50 text-xs font-semibold text-indigo-700 flex items-center gap-2"
+                                >
+                                  <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
+                                  Assign to Me
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => {
