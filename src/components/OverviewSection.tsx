@@ -1091,7 +1091,8 @@ export function OverviewSection({
         </span>
       </div>
 
-      {/* ROW 1: 6 Pastel KPI Cards */}
+      {/* ROW 1: 6 Pastel KPI Cards (Hidden for Support role) */}
+      {!isSupport && (
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
         {kpiCards.map((card) => (
           <button
@@ -1122,6 +1123,7 @@ export function OverviewSection({
           </button>
         ))}
       </div>
+      )}
 
       {/* ROW 2: 3-Column Middle Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
