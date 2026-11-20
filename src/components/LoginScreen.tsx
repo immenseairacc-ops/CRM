@@ -67,11 +67,41 @@ export function LoginScreen({
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-[#EFF6FF] via-[#F8FAFC] to-[#FFF7ED] flex items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-[#EFF6FF] via-[#F8FAFC] to-[#FFF4EC] flex items-center justify-center p-4 sm:p-6">
+      {/* Subtle Light Dot Grid Pattern */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-40"
+        style={{
+          backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
+          backgroundSize: '26px 26px',
+        }}
+      />
+
       {/* Soft Light Branded Ambient Orbs */}
       <div className="pointer-events-none absolute -top-28 -left-28 w-96 h-96 rounded-full bg-[#0A1B3F]/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-28 -right-28 w-96 h-96 rounded-full bg-[#F2591F]/15 blur-3xl" />
       <div className="pointer-events-none absolute top-1/3 right-1/4 w-64 h-64 rounded-full bg-sky-200/35 blur-3xl" />
+
+      {/* Floating Light-Theme Immense Air Service Badges (SMS, RCS, WhatsApp, OBD, IVR) */}
+      <div className="pointer-events-none hidden md:block">
+        <div className="absolute top-14 left-12 px-4 py-2 rounded-2xl bg-white/80 backdrop-blur border border-blue-200/80 shadow-sm text-xs font-extrabold text-[#0A1B3F] flex items-center gap-2 -rotate-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#0A1B3F]" />
+          📱 Bulk SMS (DLT)
+        </div>
+        <div className="absolute top-20 right-14 px-4 py-2 rounded-2xl bg-white/80 backdrop-blur border border-orange-200/80 shadow-sm text-xs font-extrabold text-[#F2591F] flex items-center gap-2 rotate-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#F2591F]" />
+          ✨ RCS Messaging
+        </div>
+        <div className="absolute bottom-20 left-16 px-4 py-2 rounded-2xl bg-white/80 backdrop-blur border border-emerald-200/80 shadow-sm text-xs font-extrabold text-emerald-700 flex items-center gap-2 rotate-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+          💬 WhatsApp Business API
+        </div>
+        <div className="absolute bottom-28 right-16 px-4 py-2 rounded-2xl bg-white/80 backdrop-blur border border-sky-200/80 shadow-sm text-xs font-extrabold text-sky-800 flex items-center gap-2 -rotate-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-sky-500" />
+          📞 Cloud IVR &amp; 📢 Voice OBD
+        </div>
+      </div>
+
       <div className="w-full max-w-md relative z-10 bg-white/95 backdrop-blur rounded-3xl shadow-2xl border border-slate-200/90 overflow-hidden">
         {/* 30% Deep Navy Blue Header with Crisp White Logo Badge & 20% Orange Accent */}
         <div className="bg-[#0A1B3F] px-6 py-6 text-white relative overflow-hidden">
