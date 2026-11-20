@@ -625,7 +625,7 @@ export default function CrmAppPage() {
             </div>
             <div className="hidden sm:flex items-center gap-2">
               <CuteAgentAvatar size={28} />
-              <RoleBadge role={currentUser.role} />
+              {/* Role badge hidden */}
               {currentUser.teamId && (
                 <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold">
                   {(db.teams || []).find((t) => t.id === currentUser.teamId)?.name || currentUser.teamId}
@@ -688,7 +688,7 @@ export default function CrmAppPage() {
                               </div>
                             </div>
                           </div>
-                          <RoleBadge role={u.role} />
+                          {/* Role badge hidden */}
                         </button>
                       ))}
                     </div>

@@ -264,7 +264,6 @@ export function TeamManagementSection({
               <tr>
                 <th className="py-3 px-4">User &amp; Login Email</th>
                 <th className="py-3 px-4">Password</th>
-                <th className="py-3 px-4">Role</th>
                 <th className="py-3 px-4">Assigned Team</th>
                 <th className="py-3 px-4">Mapped Account Manager</th>
                 <th className="py-3 px-4">Status</th>
@@ -290,10 +289,6 @@ export function TeamManagementSection({
                     <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-800 font-mono text-xs font-bold border border-slate-200">
                       {u.password || '123456'}
                     </span>
-                  </td>
-
-                  <td className="py-3.5 px-4">
-                    <RoleBadge role={u.role} />
                   </td>
 
                   <td className="py-3.5 px-4">
