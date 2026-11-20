@@ -1,8 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Eye, EyeOff, Lock, Mail, RefreshCw, ShieldCheck } from 'lucide-react';
 import { CrmDatabase, User } from '@/types/crm';
+
+function generateCaptchaCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 5; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
 
 export function LoginScreen({
   onLoginSuccess,
@@ -14,10 +23,26 @@ export function LoginScreen({
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [captchaCode, setCaptchaCode] = useState('');
+  const [captchaInput, setCaptchaInput] = useState('');
+
+  useEffect(() => {
+    setCaptchaCode(generateCaptchaCode());
+  }, []);
+
+  const refreshCaptcha = () => {
+    setCaptchaCode(generateCaptchaCode());
+    setCaptchaInput('');
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (captchaInput.trim().toUpperCase() !== captchaCode) {
+      setError('Incorrect security captcha. Please try again.');
+      refreshCaptcha();
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/crm', {
@@ -124,6 +149,42 @@ export function LoginScreen({
               >
                 {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
+            </div>
+          </div>
+
+          {/* Security Captcha */}
+          <div>
+            <label className="block text-xs font-bold text-[#0A1B3F] mb-1">
+              Security Captcha *
+            </label>
+            <div className="flex items-center gap-2">
+              <div
+                className="px-3.5 py-2 rounded-xl bg-[#0A1B3F] text-white font-mono text-base font-black tracking-[0.28em] select-none border border-[#0A1B3F] shadow-inner flex items-center gap-2 shrink-0"
+                style={{
+                  backgroundImage:
+                    'repeating-linear-gradient(135deg, rgba(242,89,31,0.16) 0px, rgba(242,89,31,0.16) 4px, transparent 4px, transparent 10px)',
+                }}
+              >
+                <ShieldCheck className="w-4 h-4 text-[#F2591F]" />
+                <span>{captchaCode || '-----'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={refreshCaptcha}
+                title="Refresh Captcha"
+                className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[#0A1B3F] transition shrink-0"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+              <input
+                type="text"
+                required
+                maxLength={6}
+                value={captchaInput}
+                onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
+                placeholder="Enter code"
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono font-bold uppercase tracking-widest focus:ring-2 focus:ring-[#F2591F]/25 focus:border-[#F2591F] outline-none bg-slate-50/50 focus:bg-white transition"
+              />
             </div>
           </div>
 
