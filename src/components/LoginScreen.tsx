@@ -67,8 +67,12 @@ export function LoginScreen({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-white to-[#EEF2F9] flex items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-[#EFF6FF] via-[#F8FAFC] to-[#FFF7ED] flex items-center justify-center p-4 sm:p-6">
+      {/* Soft Light Branded Ambient Orbs */}
+      <div className="pointer-events-none absolute -top-28 -left-28 w-96 h-96 rounded-full bg-[#0A1B3F]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-28 -right-28 w-96 h-96 rounded-full bg-[#F2591F]/15 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 right-1/4 w-64 h-64 rounded-full bg-sky-200/35 blur-3xl" />
+      <div className="w-full max-w-md relative z-10 bg-white/95 backdrop-blur rounded-3xl shadow-2xl border border-slate-200/90 overflow-hidden">
         {/* 30% Deep Navy Blue Header with Crisp White Logo Badge & 20% Orange Accent */}
         <div className="bg-[#0A1B3F] px-6 py-6 text-white relative overflow-hidden">
           <div className="absolute -right-10 -top-10 w-36 h-36 rounded-full bg-[#F2591F]/20 blur-2xl pointer-events-none" />
