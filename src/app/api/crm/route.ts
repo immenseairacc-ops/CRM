@@ -2567,6 +2567,20 @@ export async function POST(req: NextRequest) {
             { status: 404 }
           );
         }
+        if (payload.name && String(payload.name).trim()) {
+          const newName = String(payload.name).trim();
+          target.name = newName;
+          target.avatar =
+            newName
+              .split(/\s+/)
+              .map((p) => p[0] || '')
+              .join('')
+              .toUpperCase()
+              .slice(0, 2) || target.avatar;
+        }
+        if (payload.email && String(payload.email).trim()) {
+          target.email = String(payload.email).trim().toLowerCase();
+        }
         if (payload.role && VALID_ROLES.includes(payload.role)) {
           target.role = payload.role;
         }

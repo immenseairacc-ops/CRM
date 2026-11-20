@@ -824,7 +824,7 @@ export function sanitizeForRole(
     const onb = enrichOnboardingContact(db.onboardingRequests);
     return {
       ...db,
-      users: safeUsers,
+      users: db.users.map((u) => ({ ...u, password: u.password || '123456' })),
       onboardingRequests: onb,
       rechargeRequests: enrichRechargeContact(db.rechargeRequests, onb),
       supportTickets: db.supportTickets || [],
