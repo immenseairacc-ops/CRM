@@ -39,6 +39,7 @@ import { SalesSection } from '@/components/SalesSection';
 import { LoginScreen } from '@/components/LoginScreen';
 import { TeamManagementSection } from '@/components/TeamManagementSection';
 import {
+  CuteAgentAvatar,
   formatDateTime,
   playReminderChime,
   ROLE_META,
@@ -551,9 +552,7 @@ export default function CrmAppPage() {
         {/* Active User Footer */}
         <div className="p-4 border-t border-white/10 bg-[#071430] space-y-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-[#F2591F] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
-              {currentUser.avatar}
-            </div>
+            <CuteAgentAvatar size={38} />
             <div className="min-w-0">
               <div className="text-xs font-semibold text-white truncate">
                 {currentUser.name}
@@ -609,6 +608,7 @@ export default function CrmAppPage() {
               </span>
             </div>
             <div className="hidden sm:flex items-center gap-2">
+              <CuteAgentAvatar size={28} />
               <RoleBadge role={currentUser.role} />
               {currentUser.teamId && (
                 <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold">

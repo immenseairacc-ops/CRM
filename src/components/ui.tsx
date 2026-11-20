@@ -320,3 +320,37 @@ export function playReminderChime() {
     // Ignore autoplay restriction errors gracefully
   }
 }
+
+export function CuteAgentAvatar({ size = 36 }: { size?: number }) {
+  return (
+    <div
+      style={{ width: size, height: size }}
+      className="relative shrink-0 animate-agent-float select-none"
+      title="Immense Air Smart Agent"
+    >
+      <svg
+        viewBox="0 0 64 64"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-full h-full drop-shadow-sm"
+      >
+        {/* Antenna */}
+        <line x1="32" y1="6" x2="32" y2="14" stroke="#F2591F" strokeWidth="3" strokeLinecap="round" />
+        <circle cx="32" cy="5" r="3.5" fill="#F2591F" />
+        {/* Head */}
+        <rect x="10" y="14" width="44" height="36" rx="14" fill="#0A1B3F" stroke="#ffffff" strokeWidth="2.5" />
+        {/* Visor */}
+        <rect x="16" y="22" width="32" height="18" rx="8" fill="#13295B" />
+        {/* Cute Blinking Eyes */}
+        <g className="animate-agent-blink">
+          <circle cx="25" cy="31" r="3.5" fill="#ffffff" />
+          <circle cx="39" cy="31" r="3.5" fill="#ffffff" />
+          <circle cx="26" cy="30" r="1.2" fill="#F2591F" />
+          <circle cx="40" cy="30" r="1.2" fill="#F2591F" />
+        </g>
+        {/* Cute Smile */}
+        <path d="M27 43 Q32 46.5 37 43" stroke="#F2591F" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+      </svg>
+    </div>
+  );
+}

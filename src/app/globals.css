@@ -98,6 +98,33 @@
 .text-navy {
   color: var(--brand-navy);
 }
+
+@keyframes agentFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes agentBlink {
+  0%, 92%, 100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.15);
+  }
+}
+
+.animate-agent-float {
+  animation: agentFloat 2.8s ease-in-out infinite;
+}
+
+.animate-agent-blink {
+  transform-origin: center;
+  animation: agentBlink 4s ease-in-out infinite;
+}
 .bg-navy {
   background-color: var(--brand-navy);
 }
