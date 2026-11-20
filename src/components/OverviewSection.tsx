@@ -1091,8 +1091,14 @@ export function OverviewSection({
         </span>
       </div>
 
-      {/* ROW 1: 6 Pastel KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
+      {/* ROW 1: Pastel KPI Cards */}
+      <div
+        className={
+          isSupport
+            ? 'grid grid-cols-2 md:grid-cols-4 gap-3.5'
+            : 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5'
+        }
+      >
         {kpiCards
           .filter(
             (c) =>
