@@ -110,6 +110,8 @@ export function LeadsSection({
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const [pricingPopupLead, setPricingPopupLead] = useState<Lead | null>(null);
+  const [reassignLead, setReassignLead] = useState<Lead | null>(null);
+  const [reassignTargetId, setReassignTargetId] = useState<string>('');
 
   // Upload Leads Modal
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -1172,6 +1174,22 @@ ${dynamicSignature}`;
                                 >
                                   <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
                                   Assign to Me
+                                </button>
+                              )}
+                              {isManager && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    setReassignLead(lead);
+                                    setReassignTargetId(
+                                      lead.assignedToAgentId || assignableUsers[0]?.id || ''
+                                    );
+                                  }}
+                                  className="w-full px-3 py-2 rounded-xl hover:bg-amber-50 text-xs font-semibold text-amber-700 flex items-center gap-2"
+                                >
+                                  <Users className="w-3.5 h-3.5 text-amber-600" />
+                                  Reassign Lead
                                 </button>
                               )}
                               <button
@@ -3437,6 +3455,63 @@ ${dynamicSignature}`;
                   (pricingPopupLead.serviceItems || []).reduce((sum, it) => sum + (it.amount || 0), 0)
                 )}
               </span>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Reassign Lead Modal (Admin & Account Manager) */}
+      <Modal
+        open={Boolean(reassignLead)}
+        onClose={() => setReassignLead(null)}
+        title={`Reassign Lead — ${reassignLead?.clientName || ''}`}
+      >
+        {reassignLead && (
+          <div className="space-y-4">
+            <div className="text-xs text-slate-500">
+              Current Assignee:{' '}
+              <span className="font-bold text-slate-800">
+                {reassignLead.assignedToAgentName || 'Unassigned'}
+              </span>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                Select New Agent / Account Manager
+              </label>
+              <select
+                value={reassignTargetId}
+                onChange={(e) => setReassignTargetId(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              >
+                {assignableUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.id === currentUser.id ? 'Me' : u.department || 'Team'})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setReassignLead(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!reassignTargetId}
+                onClick={async () => {
+                  const ok = await onAction('ASSIGN_LEAD', {
+                    leadId: reassignLead.id,
+                    agentId: reassignTargetId,
+                  });
+                  if (ok) setReassignLead(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-semibold"
+              >
+                Confirm Reassign
+              </button>
             </div>
           </div>
         )}
