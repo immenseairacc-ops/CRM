@@ -85,22 +85,6 @@ export function ErrorCodeHubSection() {
 
   return (
     <div className="space-y-4">
-      {/* Header Banner */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5 text-orange-500" />
-            Immense Error Code Hub ({ALL_ERRORS.length.toLocaleString()} Codes)
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Instant operator DLT / SMS / SMPP error code lookup with retry status &amp; recommended portal action for Support &amp; Admin.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-xs font-bold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-xl self-start">
-          <span>{filtered.length.toLocaleString()} Matching Codes</span>
-        </div>
-      </div>
-
       {/* Search & Filters */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
         <div className="flex flex-col md:flex-row md:items-center gap-3">
