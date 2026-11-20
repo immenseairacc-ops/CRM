@@ -18,6 +18,7 @@ import {
   MapPin,
   MoreVertical,
   PenLine,
+  Trash2,
   Percent,
   Phone,
   PhoneCall,
@@ -1271,6 +1272,20 @@ ${dynamicSignature}`;
                                 <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
                                 Onboard Client
                               </button>
+                              {role === 'ADMIN' && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    setOpenActionMenuId(null);
+                                    if (!confirm(`Delete lead "${lead.clientName}" permanently?`)) return;
+                                    await onAction('DELETE_LEAD', { leadId: lead.id });
+                                  }}
+                                  className="w-full px-3 py-2 rounded-xl hover:bg-rose-50 text-xs font-semibold text-rose-600 flex items-center gap-2 border-t border-slate-100 mt-1 pt-2"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                                  Delete Lead
+                                </button>
+                              )}
                             </div>
                           </>
                         )}

@@ -806,6 +806,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, data: db, message: `Lead assigned to ${agent.name}` });
       }
 
+      case 'DELETE_LEAD': {
+        if (actor.role !== 'ADMIN') {
+          return NextResponse.json({ ok: false, error: 'Only Admin can delete leads.' }, { status: 403 });
+        }
+        db.leads = db.leads.filter((l) => l.id !== payload.leadId);
+        await writeDatabaseAsync(db);
+        return NextResponse.json({ ok: true, data: db, message: 'Lead deleted.' });
+      }
+
       case 'CREATE_MEET': {
         const lead = db.leads.find((l) => l.id === payload.leadId);
         if (!lead) {
