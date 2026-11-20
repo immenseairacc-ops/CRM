@@ -203,27 +203,38 @@ export function OverviewSection({
       tab: (isSupport || isBilling ? 'onboarding' : 'leads') as NavTab,
     },
     {
-      label: 'Hot Leads',
-      value: hotLeads,
-      sub: 'Ready for meet / deal',
+      label: isSupport ? 'Open Tickets' : 'Hot Leads',
+      value: isSupport
+        ? (db.supportTickets || []).filter(
+            (t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED'
+          ).length
+        : hotLeads,
+      sub: isSupport ? 'Support / Panel queries' : 'Ready for meet / deal',
       subColor: 'text-orange-600',
       cardCls: 'bg-orange-50/75 border-orange-200/80',
       iconWrap: 'bg-orange-100/90',
       iconSrc: '/icons/hot.png',
-      tab: 'leads' as NavTab,
+      tab: (isSupport ? 'tickets' : 'leads') as NavTab,
     },
     {
-      label: 'Follow-ups',
-      value: activeReminders.length,
-      sub:
-        dueReminders.length > 0
-          ? `${dueReminders.length} due right now`
-          : 'Callbacks scheduled',
-      subColor: dueReminders.length > 0 ? 'text-rose-600' : 'text-violet-600',
+      label: isSupport ? 'Pending Recharges' : 'Follow-ups',
+      value: isSupport
+        ? db.rechargeRequests.filter((r) => r.status === 'APPROVED_FOR_SUPPORT').length
+        : activeReminders.length,
+      sub: isSupport
+        ? 'Awaiting panel top-up'
+        : dueReminders.length > 0
+        ? `${dueReminders.length} due right now`
+        : 'Callbacks scheduled',
+      subColor: isSupport
+        ? 'text-violet-600'
+        : dueReminders.length > 0
+        ? 'text-rose-600'
+        : 'text-violet-600',
       cardCls: 'bg-violet-50/75 border-violet-200/80',
       iconWrap: 'bg-violet-100/90',
       iconSrc: '/icons/followup.png',
-      tab: (isSupport || isBilling ? 'overview' : 'reminders') as NavTab,
+      tab: (isSupport ? 'recharges' : isBilling ? 'overview' : 'reminders') as NavTab,
     },
     {
       label: 'Meetings / Visits',
