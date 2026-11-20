@@ -1091,10 +1091,15 @@ export function OverviewSection({
         </span>
       </div>
 
-      {/* ROW 1: 6 Pastel KPI Cards (Hidden for Support role) */}
-      {!isSupport && (
+      {/* ROW 1: 6 Pastel KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
-        {kpiCards.map((card) => (
+        {kpiCards
+          .filter(
+            (c) =>
+              !isSupport ||
+              (c.label !== 'Active Accounts' && c.label !== 'Pending Recharges')
+          )
+          .map((card) => (
           <button
             key={card.label}
             onClick={() => onNavigate(card.tab)}
@@ -1123,7 +1128,6 @@ export function OverviewSection({
           </button>
         ))}
       </div>
-      )}
 
       {/* ROW 2: 3-Column Middle Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
