@@ -1,6 +1,6 @@
 export type Role = 'ADMIN' | 'ACCOUNT_MANAGER' | 'AGENT' | 'SUPPORT' | 'BILLING';
 
-export type LeadStatus = 'NEW' | 'HOT' | 'WARM' | 'COLD' | 'ONBOARDED';
+export type LeadStatus = 'NEW' | 'HOT' | 'WARM' | 'COLD' | 'LOST' | 'ONBOARDED';
 
 export type CallConnectStatus = 'RINGING' | 'CONNECTED' | 'NOT_CONNECTED';
 

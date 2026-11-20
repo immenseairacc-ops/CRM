@@ -872,7 +872,7 @@ ${dynamicSignature}`;
       {/* Filters */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
-          {(['ALL', 'NEW', 'HOT', 'WARM', 'COLD', 'ONBOARDED'] as const).map((st) => {
+          {(['ALL', 'NEW', 'HOT', 'WARM', 'COLD', 'LOST', 'ONBOARDED'] as const).map((st) => {
             const count =
               st === 'ALL'
                 ? db.leads.filter((l) => l.status !== 'ONBOARDED').length
@@ -1792,6 +1792,12 @@ ${dynamicSignature}`;
                         label: 'Cold Lead',
                         icon: '/icons/cold.png',
                         activeCls: 'bg-cyan-600 text-white border-cyan-600',
+                      },
+                      {
+                        id: 'LOST',
+                        label: 'Closed / Lost',
+                        icon: '',
+                        activeCls: 'bg-slate-700 text-white border-slate-700',
                       },
                     ] as const
                   ).map((st) => (
