@@ -115,6 +115,15 @@ export default function CrmAppPage() {
   );
 
   useEffect(() => {
+    const AUTH_SESSION_VERSION = '2026-11-20-v2';
+    const currentVer = localStorage.getItem('crm_auth_version');
+    if (currentVer !== AUTH_SESSION_VERSION) {
+      localStorage.removeItem('crm_logged_in_user_id');
+      localStorage.removeItem('crm_active_user_id');
+      localStorage.setItem('crm_auth_version', AUTH_SESSION_VERSION);
+      setAuthChecked(true);
+      return;
+    }
     const loggedInId = localStorage.getItem('crm_logged_in_user_id');
     const savedTab = localStorage.getItem('crm_active_tab') as NavTab | null;
     if (savedTab) setActiveTab(savedTab);
