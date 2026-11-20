@@ -401,6 +401,19 @@ export interface NotificationItem {
   readBy: string[];
 }
 
+export interface PersonalReminder {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: Role;
+  teamId?: string;
+  title: string;
+  note?: string;
+  datetime: string;
+  completed: boolean;
+  createdAt: string;
+}
+
 export interface CrmDatabase {
   teams?: Team[];
   users: User[];
@@ -409,5 +422,6 @@ export interface CrmDatabase {
   onboardingRequests: OnboardingRequest[];
   rechargeRequests: RechargeRequest[];
   supportTickets?: SupportTicket[];
+  personalReminders?: PersonalReminder[];
   notifications: NotificationItem[];
 }

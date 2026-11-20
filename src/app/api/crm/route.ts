@@ -2457,6 +2457,49 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case 'ADD_PERSONAL_REMINDER': {
+        const title = String(payload.title || '').trim();
+        const datetime = String(payload.datetime || '').trim();
+        if (!title || !datetime) {
+          return NextResponse.json(
+            { ok: false, error: 'Work title and date/time are required.' },
+            { status: 400 }
+          );
+        }
+        if (!db.personalReminders) db.personalReminders = [];
+        db.personalReminders.unshift({
+          id: makeId('prem'),
+          userId: actor.id,
+          userName: actor.name,
+          userRole: actorRole,
+          teamId: actor.teamId,
+          title,
+          note: String(payload.note || '').trim(),
+          datetime,
+          completed: false,
+          createdAt: now,
+        });
+        break;
+      }
+
+      case 'COMPLETE_PERSONAL_REMINDER': {
+        const list = db.personalReminders || [];
+        const item = list.find((p) => p.id === payload.reminderId);
+        if (item) {
+          item.completed = true;
+        }
+        break;
+      }
+
+      case 'DELETE_PERSONAL_REMINDER': {
+        if (db.personalReminders) {
+          db.personalReminders = db.personalReminders.filter(
+            (p) => p.id !== payload.reminderId
+          );
+        }
+        break;
+      }
+
       case 'MARK_NOTIFICATIONS_READ': {
         for (const n of db.notifications) {
           if (

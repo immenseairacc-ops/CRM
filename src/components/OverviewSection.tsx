@@ -654,6 +654,24 @@ export function OverviewSection({
         });
     }
 
+    // Add Personal / Account Work Reminders to Today's Schedule & Reminders
+    (db.personalReminders || [])
+      .filter((p) => !p.completed && (role === 'ADMIN' || p.userId === currentUser.id))
+      .forEach((p) => {
+        items.push({
+          id: `prem-${p.id}`,
+          time: formatTimeOnly(p.datetime) || 'Today',
+          title: p.title,
+          subtitle: `${p.note || 'Work reminder'} • ${p.userName}`,
+          badge: 'Work Reminder',
+          kind: 'REMINDER',
+          category: 'FOLLOWUP',
+          ownerRole: p.userRole,
+          ownerName: p.userName,
+          tab: 'reminders',
+        });
+      });
+
     // Add >45 Minutes Pending Work (Demo, Support, Billing) across all roles!
     const FORTY_FIVE_MIN_MS = 45 * 60 * 1000;
     const nowMs = Date.now();

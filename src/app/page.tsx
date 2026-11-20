@@ -396,7 +396,7 @@ export default function CrmAppPage() {
       label: 'Callback Reminders',
       icon: AlarmClock,
       badge: dueRemindersCount,
-      visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
+      visible: true,
     },
     {
       id: 'meets',

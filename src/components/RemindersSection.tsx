@@ -1,16 +1,19 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AlarmClock,
   BellRing,
+  Check,
   CheckCircle2,
   Clock,
   Phone,
+  Plus,
+  Trash2,
   Zap,
 } from 'lucide-react';
 import { CrmDatabase, Lead, User } from '@/types/crm';
-import { formatDateTime, StatusBadge } from './ui';
+import { formatDateTime, Modal, StatusBadge } from './ui';
 
 export function RemindersSection({
   db,
@@ -22,6 +25,32 @@ export function RemindersSection({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onAction: (action: string, payload?: Record<string, any>) => Promise<boolean>;
 }) {
+  const [openWorkModal, setOpenWorkModal] = useState(false);
+  const [workTitle, setWorkTitle] = useState('');
+  const [workDate, setWorkDate] = useState(new Date().toISOString().slice(0, 10));
+  const [workTime, setWorkTime] = useState('11:00');
+  const [workNote, setWorkNote] = useState('');
+
+  const myPersonalReminders = (db.personalReminders || []).filter(
+    (p) => currentUser.role === 'ADMIN' || p.userId === currentUser.id
+  );
+  const activePersonalReminders = myPersonalReminders.filter((p) => !p.completed);
+
+  const handleAddWorkReminder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!workTitle.trim() || !workDate) return;
+    const ok = await onAction('ADD_PERSONAL_REMINDER', {
+      title: workTitle.trim(),
+      datetime: `${workDate}T${workTime || '11:00'}:00`,
+      note: workNote.trim(),
+    });
+    if (ok) {
+      setWorkTitle('');
+      setWorkNote('');
+      setOpenWorkModal(false);
+    }
+  };
+
   const leadsWithReminders = db.leads.filter((l) => l.reminder);
   const nowMs = Date.now();
 
@@ -55,14 +84,92 @@ export function RemindersSection({
             When a client asks to call back later, scheduled reminders trigger an instant popup + sound notification at the exact time.
           </p>
         </div>
-        {currentUser.role === 'AGENT' && db.leads.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 self-start">
           <button
-            onClick={handleQuickDemoReminder}
-            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition flex items-center gap-1.5 self-start"
+            type="button"
+            onClick={() => setOpenWorkModal(true)}
+            className="px-4 py-2 rounded-xl bg-[#F2591F] hover:bg-[#d94a14] text-white text-xs font-extrabold transition flex items-center gap-1.5 shadow-sm"
           >
-            <Zap className="w-3.5 h-3.5" />
-            Test 5-Sec Live Reminder
+            <Plus className="w-4 h-4" />
+            Add Work Reminder
           </button>
+
+          {currentUser.role === 'AGENT' && db.leads.length > 0 && (
+            <button
+              onClick={handleQuickDemoReminder}
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition flex items-center gap-1.5"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              Test 5-Sec Live Reminder
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Personal / Account Work Reminders (Also synced to Today's Schedule & Reminders) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-[#0A1B3F] flex items-center gap-2">
+            <AlarmClock className="w-4 h-4 text-[#F2591F]" />
+            Work &amp; Task Reminders ({activePersonalReminders.length})
+          </h3>
+          <span className="text-[11px] text-slate-500">
+            Automatically synced to Today&apos;s Schedule &amp; Reminders
+          </span>
+        </div>
+
+        {activePersonalReminders.length === 0 ? (
+          <div className="py-5 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+            No pending work reminders. Click <strong>+ Add Work Reminder</strong> to save any task with date &amp; time.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {activePersonalReminders.map((p) => {
+              const isDue = new Date(p.datetime).getTime() <= nowMs;
+              return (
+                <div
+                  key={p.id}
+                  className={`p-3.5 rounded-xl border flex items-start justify-between gap-3 ${
+                    isDue ? 'bg-rose-50/70 border-rose-200' : 'bg-slate-50/60 border-slate-200'
+                  }`}
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-slate-900 text-xs">{p.title}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          isDue ? 'bg-rose-600 text-white' : 'bg-indigo-100 text-indigo-800'
+                        }`}
+                      >
+                        {isDue ? 'DUE NOW' : formatDateTime(p.datetime)}
+                      </span>
+                    </div>
+                    {p.note && <p className="text-[11px] text-slate-600">{p.note}</p>}
+                    <div className="text-[10px] text-slate-400">
+                      By {p.userName} • {formatDateTime(p.datetime)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onAction('COMPLETE_PERSONAL_REMINDER', { reminderId: p.id })}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1"
+                    >
+                      <Check className="w-3 h-3" /> Done
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onAction('DELETE_PERSONAL_REMINDER', { reminderId: p.id })}
+                      className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
@@ -209,6 +316,81 @@ export function RemindersSection({
           </div>
         </div>
       )}
+      {/* Add Work Reminder Modal */}
+      <Modal
+        open={openWorkModal}
+        onClose={() => setOpenWorkModal(false)}
+        title="Add Work / Task Reminder"
+        subtitle="Set date & time so it shows in Today's Schedule & Reminders."
+      >
+        <form onSubmit={handleAddWorkReminder} className="space-y-3.5">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Work / Task Title *
+            </label>
+            <input
+              required
+              value={workTitle}
+              onChange={(e) => setWorkTitle(e.target.value)}
+              placeholder="e.g., Send DLT template to client / Check GST invoice"
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Date *
+              </label>
+              <input
+                type="date"
+                required
+                value={workDate}
+                onChange={(e) => setWorkDate(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Time *
+              </label>
+              <input
+                type="time"
+                required
+                value={workTime}
+                onChange={(e) => setWorkTime(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Note (Optional)
+            </label>
+            <textarea
+              rows={2}
+              value={workNote}
+              onChange={(e) => setWorkNote(e.target.value)}
+              placeholder="Any extra details..."
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setOpenWorkModal(false)}
+              className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-xl bg-[#F2591F] hover:bg-[#d94a14] text-white text-xs font-bold"
+            >
+              Save Work Reminder
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
