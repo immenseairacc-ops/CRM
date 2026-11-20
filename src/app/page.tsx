@@ -38,6 +38,7 @@ import { TicketsSection } from '@/components/TicketsSection';
 import { SalesSection } from '@/components/SalesSection';
 import { LoginScreen } from '@/components/LoginScreen';
 import { TeamManagementSection } from '@/components/TeamManagementSection';
+import { ErrorCodeHubSection } from '@/components/ErrorCodeHubSection';
 import {
   CuteAgentAvatar,
   formatDateTime,
@@ -371,6 +372,12 @@ export default function CrmAppPage() {
       label: 'Teams & User Mapping',
       icon: ShieldCheck,
       visible: role === 'ADMIN',
+    },
+    {
+      id: 'errors',
+      label: 'Error Code Hub',
+      icon: ShieldCheck,
+      visible: role === 'SUPPORT' || role === 'ADMIN',
     },
     {
       id: 'leads',
@@ -952,6 +959,10 @@ export default function CrmAppPage() {
               currentUser={currentUser}
               onAction={handleAction}
             />
+          )}
+
+          {activeTab === 'errors' && (role === 'SUPPORT' || role === 'ADMIN') && (
+            <ErrorCodeHubSection />
           )}
         </main>
       </div>

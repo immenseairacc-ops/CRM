@@ -9,6 +9,7 @@ export type NavTab =
   | 'overview'
   | 'sales'
   | 'teams'
+  | 'errors'
   | 'leads'
   | 'inbox'
   | 'reminders'
