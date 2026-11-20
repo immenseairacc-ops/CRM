@@ -621,6 +621,15 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+const LEGACY_SEED_USER_IDS = new Set([
+  'usr-am-1',
+  'usr-agent-1',
+  'usr-agent-2',
+  'usr-agent-3',
+  'usr-support-1',
+  'usr-billing-1',
+]);
+
 export async function readDatabaseAsync(): Promise<CrmDatabase> {
   if (SUPABASE_URL && SUPABASE_KEY) {
     try {
@@ -637,8 +646,10 @@ export async function readDatabaseAsync(): Promise<CrmDatabase> {
       if (res.ok) {
         const rows = (await res.json()) as Array<{ data: CrmDatabase }>;
         if (rows.length > 0 && rows[0].data) {
-          cachedDb = rows[0].data;
-          return rows[0].data;
+          const data = rows[0].data;
+          data.users = (data.users || []).filter((u) => !LEGACY_SEED_USER_IDS.has(u.id));
+          cachedDb = data;
+          return data;
         }
         // Seed initial database into Supabase if table is empty
         const seed = createSeedDatabase();
@@ -649,7 +660,9 @@ export async function readDatabaseAsync(): Promise<CrmDatabase> {
       console.error('Supabase read fallback to local:', err);
     }
   }
-  return readDatabase();
+  const local = readDatabase();
+  local.users = (local.users || []).filter((u) => !LEGACY_SEED_USER_IDS.has(u.id));
+  return local;
 }
 
 export async function writeDatabaseAsync(db: CrmDatabase): Promise<void> {
