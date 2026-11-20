@@ -77,8 +77,8 @@ export default function CrmAppPage() {
   const alertedIdsRef = useRef<Set<string>>(new Set());
 
   const currentUser: User | undefined = useMemo(() => {
-    if (!db) return undefined;
-    return db.users.find((u) => u.id === activeUserId) || db.users[0];
+    if (!db || !activeUserId) return undefined;
+    return db.users.find((u) => u.id === activeUserId);
   }, [db, activeUserId]);
 
   const showToast = useCallback(

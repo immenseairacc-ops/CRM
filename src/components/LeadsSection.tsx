@@ -86,8 +86,22 @@ export function LeadsSection({
   const role = currentUser.role;
   const isManager = role === 'ADMIN' || role === 'ACCOUNT_MANAGER';
   const canUpload = isManager || role === 'AGENT';
-  const agents = db.users.filter((u) => u.role === 'AGENT');
-  const assignableUsers = db.users.filter((u) => u.role === 'AGENT' || u.role === 'ACCOUNT_MANAGER');
+  const agents = db.users.filter((u) => {
+    if (u.role !== 'AGENT') return false;
+    if (role === 'ACCOUNT_MANAGER') {
+      return u.managerId === currentUser.id || (Boolean(currentUser.teamId) && u.teamId === currentUser.teamId);
+    }
+    return true;
+  });
+  const assignableUsers = db.users.filter((u) => {
+    if (role === 'ACCOUNT_MANAGER') {
+      return (
+        u.id === currentUser.id ||
+        (u.role === 'AGENT' && (u.managerId === currentUser.id || (Boolean(currentUser.teamId) && u.teamId === currentUser.teamId)))
+      );
+    }
+    return u.role === 'AGENT' || u.role === 'ACCOUNT_MANAGER';
+  });
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | LeadStatus>('ALL');
