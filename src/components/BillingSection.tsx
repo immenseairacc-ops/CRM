@@ -332,16 +332,49 @@ export function BillingSection({
               Organized workspace: Outstanding bills automatically move to <strong>Payment Follow-Up</strong> until 100% settled.
             </p>
           </div>
-          {dueCallbacksCount > 0 && (
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
             <button
               type="button"
-              onClick={() => setBillingTab('followup')}
-              className="px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-extrabold flex items-center gap-1.5 animate-pulse shadow-xs self-start md:self-auto"
+              onClick={() => {
+                const headers = ['Company', 'Client', 'Invoice No', 'Total Amount', 'Paid', 'Balance', 'Status', 'Date'];
+                const rows = billedHistory.map((item) => {
+                  const br = getPaymentBreakdown(item);
+                  return [
+                    item.companyName || '',
+                    item.clientName || '',
+                    item.billingInvoiceNumber || item.id || '',
+                    String(br.total || 0),
+                    String(br.paid || 0),
+                    String(br.balance || 0),
+                    br.balance > 0 ? 'PENDING' : 'PAID',
+                    (item.createdAt || '').slice(0, 10),
+                  ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',');
+                });
+                const csv = [headers.join(','), ...rows].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `immense-billing-export-${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition"
             >
-              <AlarmClock className="w-4 h-4" />
-              {dueCallbacksCount} Payment Call Due Today!
+              <Download className="w-3.5 h-3.5" />
+              Export CSV (GST/CA)
             </button>
-          )}
+            {dueCallbacksCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setBillingTab('followup')}
+                className="px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-extrabold flex items-center gap-1.5 animate-pulse shadow-xs"
+              >
+                <AlarmClock className="w-4 h-4" />
+                {dueCallbacksCount} Payment Call Due Today!
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Clean 4-Tab Bar */}
