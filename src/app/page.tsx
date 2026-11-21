@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   AlarmClock,
   BarChart3,
@@ -38,7 +39,10 @@ import { TicketsSection } from '@/components/TicketsSection';
 import { SalesSection } from '@/components/SalesSection';
 import { LoginScreen } from '@/components/LoginScreen';
 import { TeamManagementSection } from '@/components/TeamManagementSection';
-import { ErrorCodeHubSection } from '@/components/ErrorCodeHubSection';
+const ErrorCodeHubSection = dynamic(
+  () => import('@/components/ErrorCodeHubSection').then((m) => m.ErrorCodeHubSection),
+  { ssr: false }
+);
 import {
   CuteAgentAvatar,
   formatDateTime,
