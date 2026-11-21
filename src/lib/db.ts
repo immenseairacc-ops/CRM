@@ -897,9 +897,7 @@ export function sanitizeForRole(
       teams: db.teams,
       users: teamVisibleUsers,
       leads: [],
-      meetRequests: db.meetRequests.filter(
-        (m) => m.status !== 'REJECTED' && belongsToMyTeam(m.teamId, m.agentId)
-      ),
+      meetRequests: db.meetRequests.filter((m) => m.status !== 'REJECTED'),
       onboardingRequests: maskedOnboarding,
       rechargeRequests: sanitizedRecharges,
       supportTickets: (db.supportTickets || []).filter((t) =>
