@@ -176,6 +176,7 @@ export function LeadsSection({
   // Email Preview & Edit Before Sending Modal
   const [emailPreviewModal, setEmailPreviewModal] = useState<{
     open: boolean;
+    leadId?: string;
     to: string;
     cc: string;
     subject: string;
@@ -504,35 +505,20 @@ Please find your official proposal PDF attached with this email.
 
 ${dynamicSignature}`;
 
-    // Redirect directly to Hostinger Webmail compose with To / CC / Subject / Body prefilled
-    const hostingerUrl =
-      `https://mail.hostinger.com/?_task=mail&_action=compose` +
-      `&_to=${encodeURIComponent(toEmail)}` +
-      `&_cc=${encodeURIComponent(ccEmail)}` +
-      `&_subject=${encodeURIComponent(defaultSubject)}` +
-      `&_body=${encodeURIComponent(defaultBody)}`;
-    window.open(hostingerUrl, 'immense_hostinger_mail');
-
-    const subtotal = serviceItems.reduce((s, i) => s + i.amount, 0);
-    void onAction('UPDATE_LEAD_STATUS', {
+    setEmailPreviewModal({
+      open: true,
       leadId: activeLead.id,
-      callConnectStatus,
-      status: callConnectStatus === 'CONNECTED' ? logStatus : activeLead.status,
-      activityType: logType,
-      services: callConnectStatus === 'CONNECTED' ? selectedServices : [],
-      serviceItems: callConnectStatus === 'CONNECTED' ? serviceItems : [],
+      to: toEmail,
+      cc: ccEmail,
+      subject: defaultSubject,
+      body: defaultBody,
+      proposalNumber: draftQuotation.quotationNumber,
+      attachPdf: true,
       quotation: draftQuotation,
-      quotationSent: true,
-      quotationChannel: 'Email',
-      quotationAmount: draftQuotation.totalAmount || subtotal,
-      summary:
-        logSummary ||
-        `Quotation ${draftQuotation.quotationNumber} shared via Email (Hostinger Webmail) to ${toEmail || 'client'}.`,
+      sending: false,
+      customUploadedFile: null,
+      customSignatureHtml: currentUser.mailSignatureHtml || currentUser.mailConfig?.signatureHtml || null,
     });
-
-    setActiveLead(null);
-    setLogSummary('');
-    setDraftQuotation(null);
   };
 
   const handleSendWhatsAppAndSave = async () => {
@@ -2956,6 +2942,19 @@ ${dynamicSignature}`;
                 </button>
                 <button
                   type="button"
+                  onClick={() => {
+                    const clipText = `To: ${emailPreviewModal.to}\nCC: ${emailPreviewModal.cc}\nSubject: ${emailPreviewModal.subject}\n\n${emailPreviewModal.body}`;
+                    navigator.clipboard?.writeText(clipText);
+                    window.open('https://mail.hostinger.com/', 'immense_hostinger_mail');
+                  }}
+                  className="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 transition"
+                  title="Copy content & open your logged-in Hostinger Mail tab"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Copy &amp; Open Hostinger Tab
+                </button>
+                <button
+                  type="button"
                   disabled={emailPreviewModal.sending || !emailPreviewModal.to.trim()}
                   onClick={async () => {
                     setEmailPreviewModal((prev) => (prev ? { ...prev, sending: true } : null));
@@ -3034,25 +3033,53 @@ ${dynamicSignature}`;
                         alert(`Email successfully sent to ${emailPreviewModal.to} via Hostinger Webmail with PDF Quotation! (CC: ${emailPreviewModal.cc})`);
                         setQuotationSent(true);
                         setQuotationChannel('Email');
-                        
-                        // Automatically record full Quotation Sent log in CRM history
-                        const currentLeadId = activeLead?.id || quotationModalState?.lead?.id;
-                        if (currentLeadId) {
+
+                        const currentLeadId = emailPreviewModal.leadId || activeLead?.id || quotationModalState?.lead?.id;
+                        if (currentLeadId && emailPreviewModal.quotation) {
+                          const mailQt = { ...emailPreviewModal.quotation, channel: 'Email' };
+                          await onAction('SAVE_QUOTATION', {
+                            leadId: currentLeadId,
+                            quotation: mailQt,
+                          });
                           await onAction('LOG_QUOTATION_SENT', {
                             leadId: currentLeadId,
                             proposalNumber: emailPreviewModal.proposalNumber,
                             channel: 'Email',
                             to: emailPreviewModal.to,
-                            amount: emailPreviewModal.quotation?.totalAmount,
+                            amount: emailPreviewModal.quotation.totalAmount,
+                            quotation: mailQt,
                           });
                         }
+                        if (activeLead) {
+                          const mailQt = emailPreviewModal.quotation
+                            ? { ...emailPreviewModal.quotation, channel: 'Email' }
+                            : undefined;
+                          await onAction('UPDATE_LEAD_STATUS', {
+                            leadId: activeLead.id,
+                            callConnectStatus,
+                            status: callConnectStatus === 'CONNECTED' ? logStatus : activeLead.status,
+                            activityType: logType,
+                            services: callConnectStatus === 'CONNECTED' ? selectedServices : [],
+                            serviceItems: callConnectStatus === 'CONNECTED' ? serviceItems : [],
+                            quotation: mailQt,
+                            quotationSent: true,
+                            quotationChannel: 'Email',
+                            quotationAmount: emailPreviewModal.quotation?.totalAmount,
+                            summary:
+                              logSummary ||
+                              `Quotation ${emailPreviewModal.proposalNumber} sent via Hostinger Mail to ${emailPreviewModal.to}.`,
+                          });
+                          setActiveLead(null);
+                          setLogSummary('');
+                          setDraftQuotation(null);
+                        }
                         setEmailPreviewModal(null);
-                        // Close call & lead update modal after email is sent
-                        setActiveLead(null);
                       } else {
+                        setEmailPreviewModal((prev) => (prev ? { ...prev, sending: false } : null));
                         alert(`Email error: ${data.error || 'Failed to send email.'}\nKripya credentials check karein.`);
                       }
                     } catch (sendErr: any) {
+                      setEmailPreviewModal((prev) => (prev ? { ...prev, sending: false } : null));
                       alert(`Network/Server error: ${sendErr.message || 'Unable to reach send-email service.'}`);
                     }
                   }}
@@ -3154,52 +3181,21 @@ Please find your official proposal details above (you can attach the downloaded 
 
 ${dynamicSignature}`;
 
-          const hostingerUrl =
-            `https://mail.hostinger.com/?_task=mail&_action=compose` +
-            `&_to=${encodeURIComponent(toEmail)}` +
-            `&_cc=${encodeURIComponent(ccEmail)}` +
-            `&_subject=${encodeURIComponent(defaultSubject)}` +
-            `&_body=${encodeURIComponent(defaultBody)}`;
-          window.open(hostingerUrl, 'immense_hostinger_mail');
-
-          const mailQt = { ...updatedQt, channel: 'Email' };
-          if (leadToUse) {
-            await onAction('SAVE_QUOTATION', {
-              leadId: leadToUse.id,
-              quotation: mailQt,
-            });
-            await onAction('LOG_QUOTATION_SENT', {
-              leadId: leadToUse.id,
-              proposalNumber: updatedQt.quotationNumber,
-              channel: 'Email',
-              to: toEmail,
-              amount: updatedQt.totalAmount,
-              quotation: mailQt,
-            });
-          }
-          if (quotationModalState?.fromCallModal) {
-            if (activeLead) {
-              await onAction('UPDATE_LEAD_STATUS', {
-                leadId: activeLead.id,
-                callConnectStatus,
-                status: callConnectStatus === 'CONNECTED' ? logStatus : activeLead.status,
-                activityType: logType,
-                services: updatedQt.items.map((i) => i.service),
-                serviceItems: updatedQt.items,
-                quotation: mailQt,
-                quotationSent: true,
-                quotationChannel: 'Email',
-                quotationAmount: updatedQt.totalAmount,
-                summary:
-                  logSummary ||
-                  `Quotation ${updatedQt.quotationNumber} shared via Email (Hostinger Webmail) to ${toEmail || 'client'}.`,
-              });
-            }
-            setActiveLead(null);
-            setLogSummary('');
-            setDraftQuotation(null);
-          }
           setQuotationModalState(null);
+          setEmailPreviewModal({
+            open: true,
+            leadId: leadToUse?.id,
+            to: toEmail,
+            cc: ccEmail,
+            subject: defaultSubject,
+            body: defaultBody,
+            proposalNumber: updatedQt.quotationNumber,
+            attachPdf: true,
+            quotation: updatedQt,
+            sending: false,
+            customUploadedFile: null,
+            customSignatureHtml: currentUser.mailSignatureHtml || currentUser.mailConfig?.signatureHtml || null,
+          });
         }}
         onSendWhatsApp={async (updatedQt) => {
           const leadToUse = quotationModalState?.lead || activeLead;

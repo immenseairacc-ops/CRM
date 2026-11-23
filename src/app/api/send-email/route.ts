@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 import { getEmailTransporter } from '@/lib/mailer';
-import { readDatabase } from '@/lib/db';
+import { readDatabaseAsync } from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     // If userId provided, check if user has personal mail sign-in saved
     if (userId) {
       try {
-        const db = readDatabase();
+        const db = await readDatabaseAsync();
         const matchedUser = db.users.find((u) => u.id === userId);
         const userMail = matchedUser?.mailConfig?.email;
         const userPass = matchedUser?.mailConfig?.password;

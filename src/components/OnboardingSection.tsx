@@ -3048,6 +3048,7 @@ export function OnboardingSection({
         lead={quoteModalState?.leadProxy || null}
         initialQuotation={quoteModalState?.initial || null}
         quotationHistory={quoteModalState?.history || []}
+        userId={currentUser.id}
         managerDefaults={{
           name: currentUser.name,
           designation: currentUser.designation,
@@ -3056,85 +3057,23 @@ export function OnboardingSection({
         }}
         onSave={async (updatedQt) => {
           if (!quoteModalState) return;
+          const item = quoteModalState.item;
           await onAction('SAVE_QUOTATION', {
-            leadId: quoteModalState.item.leadId,
-            onboardingId: quoteModalState.item.id,
+            leadId: item.leadId,
+            onboardingId: item.id,
             quotation: updatedQt,
           });
-        }}
-        onOpenEmailComposer={async (updatedQt) => {
-          if (!quoteModalState) return;
-          const item = quoteModalState.item;
-          const toEmail =
-            quoteModalState.leadProxy.email || item.clientEmail || updatedQt.email || '';
-          const activeEmail =
-            currentUser.mailConfig?.email ||
-            currentUser.email ||
-            updatedQt.managerEmail ||
-            'parvej@immenseair.in';
-          const activeName = currentUser.name || updatedQt.managerName || 'Account Manager';
-          const activeDesignation =
-            currentUser.designation ||
-            (currentUser.role === 'ADMIN'
-              ? 'General Manager'
-              : updatedQt.managerDesignation || 'Sales & Marketing Manager');
-          const activePhone = currentUser.phone || updatedQt.managerPhone || '+91 9768566466';
-
-          const customSignature = currentUser.mailSignature || currentUser.mailConfig?.signature;
-          const dynamicSignature = customSignature
-            ? customSignature
-            : `Warm regards,\n${activeName}\n${activeDesignation}\nImmense Air Pvt Ltd (Immense Smart Solutions)\nMobile: ${activePhone} | Email: ${activeEmail}\nWebsite: www.immenseair.in`;
-
-          const ccEmail = [activeEmail, 'vikram.admin@nexuscrm.in'].filter(Boolean).join(',');
-          const rawName = (quoteModalState.leadProxy.clientName || updatedQt.clientName || '').trim();
-          const clientGreeting = rawName ? `Dear ${rawName} Sir/Ma'am,` : "Dear Sir/Ma'am,";
-          const defaultSubject = `Bulk SMS & Communication Proposal | Immense Smart Solutions — ${updatedQt.quotationNumber}`;
-          const servicesList = (updatedQt.items || [])
-            .map((it) => `• ${it.service} — ₹ ${Number(it.amount || 0).toLocaleString('en-IN')}`)
-            .join('\n');
-
-          const defaultBody = `${clientGreeting}
-
-Greetings from Immense Smart Solutions!
-
-Here is your official proposal for ${item.companyName}:
-
-Proposal Details:
-• Proposal No: ${updatedQt.quotationNumber}
-• Date: ${updatedQt.quotationDate}
-• Valid Until: ${updatedQt.validUntil}
-• Services & Pricing:
-${servicesList}
-• Total Amount: ₹ ${updatedQt.totalAmount.toLocaleString('en-IN')} (incl. ${updatedQt.gstPercent}% GST)
-
-Let's connect and explore how we can scale your campaigns further!
-
-${dynamicSignature}`;
-
-          const hostingerUrl =
-            `https://mail.hostinger.com/?_task=mail&_action=compose` +
-            `&_to=${encodeURIComponent(toEmail)}` +
-            `&_cc=${encodeURIComponent(ccEmail)}` +
-            `&_subject=${encodeURIComponent(defaultSubject)}` +
-            `&_body=${encodeURIComponent(defaultBody)}`;
-          window.open(hostingerUrl, 'immense_hostinger_mail');
-
-          const mailQt = { ...updatedQt, channel: 'Email' };
-          await onAction('SAVE_QUOTATION', {
-            leadId: item.leadId,
-            onboardingId: item.id,
-            quotation: mailQt,
-          });
-          await onAction('LOG_QUOTATION_SENT', {
-            leadId: item.leadId,
-            onboardingId: item.id,
-            proposalNumber: updatedQt.quotationNumber,
-            channel: 'Email',
-            to: toEmail,
-            amount: updatedQt.totalAmount,
-            quotation: mailQt,
-          });
-          setQuoteModalState(null);
+          if (updatedQt.channel === 'Email') {
+            await onAction('LOG_QUOTATION_SENT', {
+              leadId: item.leadId,
+              onboardingId: item.id,
+              proposalNumber: updatedQt.quotationNumber,
+              channel: 'Email',
+              to: quoteModalState.leadProxy.email || item.clientEmail || updatedQt.email || '',
+              amount: updatedQt.totalAmount,
+              quotation: updatedQt,
+            });
+          }
         }}
         onSendWhatsApp={async (updatedQt) => {
           if (!quoteModalState) return;

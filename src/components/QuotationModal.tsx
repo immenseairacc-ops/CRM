@@ -2121,6 +2121,7 @@ export function QuotationModal({
   onSendWhatsApp,
   quotationHistory,
   managerDefaults,
+  userId,
 }: {
   open: boolean;
   onClose: () => void;
@@ -2137,6 +2138,7 @@ export function QuotationModal({
     phone?: string;
     email?: string;
   };
+  userId?: string;
 }) {
   const [data, setData] = useState<QuotationState>(getDefaultQuotationState);
   const [openProductKey, setOpenProductKey] = useState<string | null>('cpaas');
@@ -2432,15 +2434,15 @@ export function QuotationModal({
         return `• ${PRODUCT_NAMES[p.key] || p.title} — ₹ ${lineTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
       })
       .join('\n');
-    const textBody = `Dear ${data.client.clientName || 'Partner'},\n\nGreetings from Immense Air Pvt Ltd (Immense Smart Solution)!\n\nWe are pleased to present our communication solutions proposal for ${data.client.companyName || 'your esteemed business'}.\n\nProposal Details:\nProposal No: ${currentQt.quotationNumber}\nDate: ${currentQt.quotationDate}\nValid Until: ${currentQt.validUntil}\nSelected Services:\n${servicesList}\nGrand Total: ₹ ${grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })} (inclusive of 18% GST)\n\nPlease review the proposal and let us know if you need any clarification or customization.\n\nWarm regards,\n${data.manager.name}\n${data.manager.designation}\nImmense Air Pvt Ltd\nMobile: ${data.manager.mobile}\nEmail: ${data.manager.email}\nWebsite: www.immenseair.in`;
+    const textBody = `Dear ${data.client.clientName || 'Partner'},\n\nGreetings from Immense Air Pvt Ltd (Immense Smart Solution)!\n\nWe are pleased to present our communication solutions proposal for ${data.client.companyName || 'your esteemed business'}.\n\nProposal Details:\nProposal No: ${currentQt.quotationNumber}\nDate: ${currentQt.quotationDate}\nValid Until: ${currentQt.validUntil}\nSelected Services:\n${servicesList}\nGrand Total: ₹ ${grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })} (inclusive of 18% GST)\n\nPlease review the attached official PDF proposal and let us know if you need any clarification or customization.\n\nWarm regards,\n${data.manager.name}\n${data.manager.designation}\nImmense Air Pvt Ltd\nMobile: ${data.manager.mobile}\nEmail: ${data.manager.email}\nWebsite: www.immenseair.in`;
 
-    const hostingerUrl =
-      `https://mail.hostinger.com/?_task=mail&_action=compose` +
-      `&_to=${encodeURIComponent(toEmail)}` +
-      `&_cc=${encodeURIComponent(ccEmail)}` +
-      `&_subject=${encodeURIComponent(subject)}` +
-      `&_body=${encodeURIComponent(textBody)}`;
-    window.open(hostingerUrl, 'immense_hostinger_mail');
+    setEmailTo(toEmail);
+    setEmailCc(ccEmail);
+    setEmailSubject(subject);
+    setEmailBody(textBody);
+    setEmailAttachPdf(true);
+    setEmailStatusMessage(null);
+    setEmailModalOpen(true);
   };
 
   const handleSendEmail = async () => {
@@ -2533,6 +2535,7 @@ export function QuotationModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          userId,
           to: toEmail,
           cc: ccEmail,
           subject,
@@ -2548,23 +2551,23 @@ export function QuotationModal({
 
       const resData = await res.json();
       if (res.ok && resData.success) {
-        setEmailStatusMessage({
-          type: 'success',
-          text: `Email successfully sent to ${toEmail} with PDF Quotation!`,
-        });
+        await onSave({ ...buildCurrentQuotation(), channel: 'Email' });
+        alert(`Email successfully sent to ${toEmail} via Hostinger Webmail with PDF Quotation!`);
         setEmailModalOpen(false);
+        onClose();
       } else {
-        const mailtoUrl = `mailto:${encodeURIComponent(toEmail)}?cc=${encodeURIComponent(ccEmail)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(textBody)}`;
-        window.open(mailtoUrl, '_blank');
-        setEmailModalOpen(false);
+        setEmailStatusMessage({
+          type: 'error',
+          text: resData?.error || 'Failed to send email via Hostinger SMTP. Check Mail Inbox login.',
+        });
       }
     } catch {
-      const mailtoUrl = `mailto:${encodeURIComponent(toEmail)}?cc=${encodeURIComponent(ccEmail)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(textBody)}`;
-      window.open(mailtoUrl, '_blank');
-      setEmailModalOpen(false);
+      setEmailStatusMessage({
+        type: 'error',
+        text: 'Failed to send email via Hostinger SMTP. Check Mail Inbox login.',
+      });
     } finally {
       setSendingEmail(false);
-      setTimeout(() => setEmailStatusMessage(null), 6000);
     }
   };
 
@@ -3391,6 +3394,130 @@ export function QuotationModal({
           </div>
         </div>
       </div>
+
+      {emailModalOpen && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold">
+                  Send Quotation via Hostinger Mail ({data.client.proposalNumber})
+                </h3>
+                <p className="text-[11px] text-slate-300 mt-0.5">
+                  Sends directly via Hostinger SMTP &amp; syncs to Sent folder with A4 Proposal PDF.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmailModalOpen(false)}
+                className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3 overflow-y-auto text-xs">
+              {emailStatusMessage && (
+                <div
+                  className={`px-3.5 py-2.5 rounded-xl border font-semibold ${
+                    emailStatusMessage.type === 'error'
+                      ? 'bg-rose-50 border-rose-200 text-rose-700'
+                      : emailStatusMessage.type === 'success'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : 'bg-blue-50 border-blue-200 text-blue-700'
+                  }`}
+                >
+                  {emailStatusMessage.text}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">To (Client Email) *</label>
+                  <input
+                    type="email"
+                    value={emailTo}
+                    onChange={(e) => setEmailTo(e.target.value)}
+                    placeholder="client@company.com"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">CC</label>
+                  <input
+                    type="text"
+                    value={emailCc}
+                    onChange={(e) => setEmailCc(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Message Body</label>
+                <textarea
+                  rows={8}
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 leading-relaxed"
+                />
+              </div>
+
+              <label className="inline-flex items-center gap-2 font-semibold text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={emailAttachPdf}
+                  onChange={(e) => setEmailAttachPdf(e.target.checked)}
+                  className="rounded border-slate-300"
+                />
+                Attach Exact A4 Proposal PDF
+              </label>
+            </div>
+
+            <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setEmailModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const clipText = `To: ${emailTo}\nCC: ${emailCc}\nSubject: ${emailSubject}\n\n${emailBody}`;
+                    navigator.clipboard?.writeText(clipText);
+                    window.open('https://mail.hostinger.com/', 'immense_hostinger_mail');
+                  }}
+                  className="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold"
+                  title="Copy content & open your logged-in Hostinger Webmail tab"
+                >
+                  Copy &amp; Open Hostinger Tab
+                </button>
+                <button
+                  type="button"
+                  disabled={sendingEmail || !emailTo.trim()}
+                  onClick={handleSendEmail}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold shadow-sm"
+                >
+                  {sendingEmail ? 'Attaching PDF & Sending...' : 'Confirm & Send with PDF'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
