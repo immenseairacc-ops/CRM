@@ -2440,7 +2440,7 @@ export function QuotationModal({
       `&_cc=${encodeURIComponent(ccEmail)}` +
       `&_subject=${encodeURIComponent(subject)}` +
       `&_body=${encodeURIComponent(textBody)}`;
-    window.open(hostingerUrl, '_blank');
+    window.open(hostingerUrl, 'immense_hostinger_mail');
   };
 
   const handleSendEmail = async () => {
@@ -2583,11 +2583,12 @@ export function QuotationModal({
     const waUrl = cleanPhone
       ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`
       : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, '_blank');
+    window.open(waUrl, 'immense_whatsapp_web');
 
     if (onSendWhatsApp) {
       await onSendWhatsApp(currentQt);
     }
+    onClose();
   };
 
   if (!open) return null;

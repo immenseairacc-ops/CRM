@@ -3117,7 +3117,7 @@ ${dynamicSignature}`;
             `&_cc=${encodeURIComponent(ccEmail)}` +
             `&_subject=${encodeURIComponent(defaultSubject)}` +
             `&_body=${encodeURIComponent(defaultBody)}`;
-          window.open(hostingerUrl, '_blank');
+          window.open(hostingerUrl, 'immense_hostinger_mail');
 
           const mailQt = { ...updatedQt, channel: 'Email' };
           await onAction('SAVE_QUOTATION', {
@@ -3154,6 +3154,7 @@ ${dynamicSignature}`;
             amount: updatedQt.totalAmount,
             quotation: waQt,
           });
+          setQuoteModalState(null);
         }}
       />
 

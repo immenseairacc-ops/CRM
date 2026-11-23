@@ -511,7 +511,7 @@ ${dynamicSignature}`;
       `&_cc=${encodeURIComponent(ccEmail)}` +
       `&_subject=${encodeURIComponent(defaultSubject)}` +
       `&_body=${encodeURIComponent(defaultBody)}`;
-    window.open(hostingerUrl, '_blank');
+    window.open(hostingerUrl, 'immense_hostinger_mail');
 
     const subtotal = serviceItems.reduce((s, i) => s + i.amount, 0);
     void onAction('UPDATE_LEAD_STATUS', {
@@ -554,7 +554,7 @@ ${dynamicSignature}`;
     const waUrl = cleanPhone
       ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`
       : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, '_blank');
+    window.open(waUrl, 'immense_whatsapp_web');
 
     // Save lead update & log with Quotation Sent via WhatsApp
     const subtotal = serviceItems.reduce((s, i) => s + i.amount, 0);
@@ -3160,7 +3160,7 @@ ${dynamicSignature}`;
             `&_cc=${encodeURIComponent(ccEmail)}` +
             `&_subject=${encodeURIComponent(defaultSubject)}` +
             `&_body=${encodeURIComponent(defaultBody)}`;
-          window.open(hostingerUrl, '_blank');
+          window.open(hostingerUrl, 'immense_hostinger_mail');
 
           const mailQt = { ...updatedQt, channel: 'Email' };
           if (leadToUse) {
@@ -3178,12 +3178,26 @@ ${dynamicSignature}`;
             });
           }
           if (quotationModalState?.fromCallModal) {
-            setDraftQuotation(mailQt);
-            setServiceItems(updatedQt.items);
-            setSelectedServices(updatedQt.items.map((i) => i.service));
-            setQuotationSent(true);
-            setQuotationChannel('Email');
-            setQuotationAmount(String(updatedQt.totalAmount));
+            if (activeLead) {
+              await onAction('UPDATE_LEAD_STATUS', {
+                leadId: activeLead.id,
+                callConnectStatus,
+                status: callConnectStatus === 'CONNECTED' ? logStatus : activeLead.status,
+                activityType: logType,
+                services: updatedQt.items.map((i) => i.service),
+                serviceItems: updatedQt.items,
+                quotation: mailQt,
+                quotationSent: true,
+                quotationChannel: 'Email',
+                quotationAmount: updatedQt.totalAmount,
+                summary:
+                  logSummary ||
+                  `Quotation ${updatedQt.quotationNumber} shared via Email (Hostinger Webmail) to ${toEmail || 'client'}.`,
+              });
+            }
+            setActiveLead(null);
+            setLogSummary('');
+            setDraftQuotation(null);
           }
           setQuotationModalState(null);
         }}
@@ -3205,13 +3219,28 @@ ${dynamicSignature}`;
             });
           }
           if (quotationModalState?.fromCallModal) {
-            setDraftQuotation(waQt);
-            setServiceItems(updatedQt.items);
-            setSelectedServices(updatedQt.items.map((i) => i.service));
-            setQuotationSent(true);
-            setQuotationChannel('WhatsApp');
-            setQuotationAmount(String(updatedQt.totalAmount));
+            if (activeLead) {
+              await onAction('UPDATE_LEAD_STATUS', {
+                leadId: activeLead.id,
+                callConnectStatus,
+                status: callConnectStatus === 'CONNECTED' ? logStatus : activeLead.status,
+                activityType: logType,
+                services: updatedQt.items.map((i) => i.service),
+                serviceItems: updatedQt.items,
+                quotation: waQt,
+                quotationSent: true,
+                quotationChannel: 'WhatsApp',
+                quotationAmount: updatedQt.totalAmount,
+                summary:
+                  logSummary ||
+                  `Quotation ${updatedQt.quotationNumber} shared via WhatsApp.`,
+              });
+            }
+            setActiveLead(null);
+            setLogSummary('');
+            setDraftQuotation(null);
           }
+          setQuotationModalState(null);
         }}
       />
 
