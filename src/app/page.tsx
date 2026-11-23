@@ -442,7 +442,7 @@ export default function CrmAppPage() {
             ).length
           : db.onboardingRequests.filter((o) => o.status === 'PENDING_APPROVAL')
               .length,
-      visible: true,
+      visible: role !== 'SUPPORT',
     },
     {
       id: 'recharges',
@@ -464,7 +464,7 @@ export default function CrmAppPage() {
           : db.rechargeRequests.filter(
               (r) => r.status === 'PENDING_APPROVAL' || r.status === 'APPROVED_FOR_SUPPORT'
             ).length,
-      visible: true,
+      visible: role !== 'SUPPORT',
     },
     {
       id: 'tickets',
