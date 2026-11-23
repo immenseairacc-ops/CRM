@@ -504,31 +504,56 @@ Please find your official proposal PDF attached with this email.
 
 ${dynamicSignature}`;
 
-    setEmailPreviewModal({
-      open: true,
-      to: toEmail,
-      cc: ccEmail,
-      subject: defaultSubject,
-      body: defaultBody,
-      proposalNumber: draftQuotation.quotationNumber,
-      attachPdf: true,
+    // Redirect directly to Hostinger Webmail compose with To / CC / Subject / Body prefilled
+    const hostingerUrl =
+      `https://mail.hostinger.com/?_task=mail&_action=compose` +
+      `&_to=${encodeURIComponent(toEmail)}` +
+      `&_cc=${encodeURIComponent(ccEmail)}` +
+      `&_subject=${encodeURIComponent(defaultSubject)}` +
+      `&_body=${encodeURIComponent(defaultBody)}`;
+    window.open(hostingerUrl, '_blank');
+
+    const subtotal = serviceItems.reduce((s, i) => s + i.amount, 0);
+    void onAction('UPDATE_LEAD_STATUS', {
+      leadId: activeLead.id,
+      callConnectStatus,
+      status: callConnectStatus === 'CONNECTED' ? logStatus : activeLead.status,
+      activityType: logType,
+      services: callConnectStatus === 'CONNECTED' ? selectedServices : [],
+      serviceItems: callConnectStatus === 'CONNECTED' ? serviceItems : [],
       quotation: draftQuotation,
-      sending: false,
-      customUploadedFile: null,
-      customSignatureHtml: currentUser.mailSignatureHtml || currentUser.mailConfig?.signatureHtml || null,
+      quotationSent: true,
+      quotationChannel: 'Email',
+      quotationAmount: draftQuotation.totalAmount || subtotal,
+      summary:
+        logSummary ||
+        `Quotation ${draftQuotation.quotationNumber} shared via Email (Hostinger Webmail) to ${toEmail || 'client'}.`,
     });
+
+    setActiveLead(null);
+    setLogSummary('');
+    setDraftQuotation(null);
   };
 
   const handleSendWhatsAppAndSave = async () => {
     if (!activeLead || !draftQuotation) return;
     let cleanPhone = (activeLead.phone || '').replace(/[^0-9]/g, '');
     if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
-    const servicesList = draftQuotation.items.map((i) => `• ${i.service}`).join('\n');
-    const message = `Hello *${activeLead.clientName || 'Sir/Madam'}*,\n\nGreetings from *Immense Air Pvt Ltd*!\n\nHere is your official *Business Proposal*:\n📄 *Proposal No:* ${draftQuotation.quotationNumber}\n🏢 *Company:* ${activeLead.companyName}\n\n*Services Included:*\n${servicesList}\n\n💰 *Grand Total:* ₹ ${draftQuotation.totalAmount.toLocaleString('en-IN')}\n\nFor any queries, feel free to contact:\n👤 *${draftQuotation.managerName || 'Account Manager'}* (${draftQuotation.managerDesignation || 'Sales'})\n📞 ${draftQuotation.managerPhone || '+91 9768566466'} | ✉️ ${draftQuotation.managerEmail || 'sales@immenseair.in'}\n\nThank you for choosing Immense Air!`;
+    const servicesList = draftQuotation.items
+      .map((i) => {
+        const it = i as unknown as { service: string; rate?: number; count?: number; amount?: number };
+        const rate = it.rate !== undefined ? `₹${it.rate}` : '';
+        const count = it.count !== undefined ? ` × ${Number(it.count).toLocaleString('en-IN')}` : '';
+        const amt = it.amount !== undefined ? ` = ₹${Number(it.amount).toLocaleString('en-IN')}` : '';
+        return `• *${it.service}*${rate ? ` — ${rate}${count}${amt}` : ''}`;
+      })
+      .join('\n');
+    const message = `Hello *${activeLead.clientName || 'Sir/Madam'}*,\n\nGreetings from *Immense Air Pvt Ltd*!\n\nHere is your official *Business Proposal*:\n📄 *Proposal No:* ${draftQuotation.quotationNumber}\n📅 *Date:* ${draftQuotation.quotationDate || ''}\n⏳ *Valid Until:* ${draftQuotation.validUntil || ''}\n🏢 *Company:* ${activeLead.companyName}\n\n*Services & Pricing:*\n${servicesList}\n\n💰 *Grand Total:* ₹ ${draftQuotation.totalAmount.toLocaleString('en-IN')} (incl. ${draftQuotation.gstPercent ?? 18}% GST)\n\n✅ Instant Content Approval\n✅ Dedicated Account Manager & 24/7 Support\n✅ Detailed Reports & Link Tracking\n\nFor any queries, feel free to contact:\n👤 *${draftQuotation.managerName || currentUser.name || 'Account Manager'}* (${draftQuotation.managerDesignation || 'Sales'})\n📞 ${draftQuotation.managerPhone || currentUser.phone || '+91 9768566466'} | ✉️ ${draftQuotation.managerEmail || currentUser.email || 'sales@immenseair.in'}\n\nThank you for choosing Immense Air!`;
 
+    // Always open WhatsApp Web (desktop browser) with chat + full quotation content prefilled
     const waUrl = cleanPhone
-      ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`
-      : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+      ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`
+      : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
 
     // Save lead update & log with Quotation Sent via WhatsApp
