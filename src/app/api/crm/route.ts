@@ -1127,6 +1127,12 @@ export async function POST(req: NextRequest) {
         const paymentType = billingType;
         const taxType = (payload.taxType === 'NON_GST' ? 'NON_GST' : 'GST');
         const gstNumber = payload.gstNumber ? String(payload.gstNumber).trim().toUpperCase() : undefined;
+        const gstPdfName = payload.gstPdfName ? String(payload.gstPdfName).trim() : undefined;
+        const rawGstPdfDataUrl = payload.gstPdfDataUrl ? String(payload.gstPdfDataUrl) : undefined;
+        const gstPdfDataUrl =
+          rawGstPdfDataUrl && rawGstPdfDataUrl.startsWith('data:application/pdf') && rawGstPdfDataUrl.length <= 750_000
+            ? rawGstPdfDataUrl
+            : undefined;
         const postpaidCycle = payload.postpaidCycle ? String(payload.postpaidCycle) as any : undefined;
 
         if (!companyName || !username || services.length === 0 || !unitPrice) {
@@ -1173,6 +1179,8 @@ export async function POST(req: NextRequest) {
           username,
           billingEntity: billingEntity || companyName,
           gstNumber,
+          gstPdfName,
+          gstPdfDataUrl,
           taxType,
           paymentType,
           postpaidCycle,

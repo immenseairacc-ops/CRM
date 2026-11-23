@@ -187,6 +187,8 @@ export function OnboardingSection({
   const [billingType, setBillingType] = useState<BillingType>('PREPAID');
   const [taxType, setTaxType] = useState<TaxType>('GST');
   const [gstNumber, setGstNumber] = useState('');
+  const [gstPdfName, setGstPdfName] = useState('');
+  const [gstPdfDataUrl, setGstPdfDataUrl] = useState('');
   const [postpaidCycle, setPostpaidCycle] = useState<PostpaidCycle>('30_DAYS');
 
   const [supportNoteTargetId, setSupportNoteTargetId] = useState<string | null>(
@@ -428,6 +430,8 @@ export function OnboardingSection({
       username,
       billingEntity,
       gstNumber: taxType === 'GST' ? gstNumber : undefined,
+      gstPdfName: taxType === 'GST' && gstPdfName ? gstPdfName : undefined,
+      gstPdfDataUrl: taxType === 'GST' && gstPdfDataUrl ? gstPdfDataUrl : undefined,
       taxType,
       paymentType: billingType,
       postpaidCycle: billingType === 'POSTPAID' ? postpaidCycle : undefined,
@@ -447,6 +451,8 @@ export function OnboardingSection({
       setUsername('');
       setBillingEntity('');
       setGstNumber('');
+      setGstPdfName('');
+      setGstPdfDataUrl('');
       setTaxType('GST');
     }
   };
@@ -1179,17 +1185,49 @@ export function OnboardingSection({
             </div>
 
             {taxType === 'GST' && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Client GSTIN (15 Digits) *
-                </label>
-                <input
-                  required
-                  value={gstNumber}
-                  onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
-                  placeholder="e.g., 27AABCF4920M1Z8"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono uppercase bg-white"
-                />
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Client GSTIN (15 Digits) *
+                  </label>
+                  <input
+                    required
+                    value={gstNumber}
+                    onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+                    placeholder="e.g., 27AABCF4920M1Z8"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono uppercase bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Upload GST Certificate PDF (Optional • Max 500 KB)
+                  </label>
+                  <input
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 500 * 1024) {
+                        alert('PDF size must be 500 KB or less to keep the server fast & lightweight.');
+                        e.target.value = '';
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        setGstPdfName(file.name);
+                        setGstPdfDataUrl(String(reader.result || ''));
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  />
+                  {gstPdfName && (
+                    <p className="text-[11px] text-emerald-700 font-semibold mt-1">
+                      ✓ Attached: {gstPdfName}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>
