@@ -2107,6 +2107,10 @@ const SERVICE_TO_KEY: Record<string, string> = {
 // ========================================================
 // Main Quotation App / Modal matching quotation-secure-app
 // ========================================================
+function makeFreshProposalNumber(): string {
+  return `ISS/${new Date().getFullYear()}/${String(Math.floor(100 + Math.random() * 900))}`;
+}
+
 export function QuotationModal({
   open,
   onClose,
@@ -2114,6 +2118,9 @@ export function QuotationModal({
   initialQuotation,
   onSave,
   onOpenEmailComposer,
+  onSendWhatsApp,
+  quotationHistory,
+  managerDefaults,
 }: {
   open: boolean;
   onClose: () => void;
@@ -2121,7 +2128,15 @@ export function QuotationModal({
   initialQuotation: LeadQuotation | null;
   startInEdit?: boolean;
   onSave: (quotation: LeadQuotation) => Promise<void> | void;
-  onOpenEmailComposer?: (quotation: LeadQuotation) => void;
+  onOpenEmailComposer?: (quotation: LeadQuotation) => Promise<void> | void;
+  onSendWhatsApp?: (quotation: LeadQuotation) => Promise<void> | void;
+  quotationHistory?: LeadQuotation[];
+  managerDefaults?: {
+    name?: string;
+    designation?: string;
+    phone?: string;
+    email?: string;
+  };
 }) {
   const [data, setData] = useState<QuotationState>(getDefaultQuotationState);
   const [openProductKey, setOpenProductKey] = useState<string | null>('cpaas');
@@ -2136,9 +2151,7 @@ export function QuotationModal({
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const highlightTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync initial state from Lead or existing quotation
-  useEffect(() => {
-    if (!open) return;
+  const buildQuotationEditorState = (qt: LeadQuotation | null): QuotationState => {
     const initial = getDefaultQuotationState();
 
     if (lead) {
@@ -2147,38 +2160,28 @@ export function QuotationModal({
       initial.client.date = new Date().toLocaleDateString('en-GB');
     }
 
-    if (initialQuotation) {
-      initial.client.clientName =
-        initialQuotation.clientName || initial.client.clientName;
-      initial.client.companyName =
-        initialQuotation.companyName || initial.client.companyName;
-      initial.client.proposalNumber =
-        initialQuotation.quotationNumber || initial.client.proposalNumber;
-      initial.client.date =
-        initialQuotation.quotationDate || initial.client.date;
+    if (managerDefaults) {
+      if (managerDefaults.name) initial.manager.name = managerDefaults.name;
+      if (managerDefaults.designation) initial.manager.designation = managerDefaults.designation;
+      if (managerDefaults.phone) initial.manager.mobile = managerDefaults.phone;
+      if (managerDefaults.email) initial.manager.email = managerDefaults.email;
+    }
 
-      if (initialQuotation.managerName) {
-        initial.manager.name = initialQuotation.managerName;
-      }
-      if (initialQuotation.managerDesignation) {
-        initial.manager.designation = initialQuotation.managerDesignation;
-      }
-      if (initialQuotation.managerPhone) {
-        initial.manager.mobile = initialQuotation.managerPhone;
-      }
-      if (initialQuotation.managerEmail) {
-        initial.manager.email = initialQuotation.managerEmail;
-      }
+    if (qt) {
+      initial.client.clientName = qt.clientName || initial.client.clientName;
+      initial.client.companyName = qt.companyName || initial.client.companyName;
+      initial.client.proposalNumber = qt.quotationNumber || initial.client.proposalNumber;
+      initial.client.date = qt.quotationDate || initial.client.date;
 
-      // If specific items were passed in leadQuotation, enable matching products
-      if (initialQuotation.items && initialQuotation.items.length > 0) {
-        const enabledKeys = new Set(
-          initialQuotation.items.map((it) => SERVICE_TO_KEY[it.service] || '')
-        );
+      if (qt.managerName) initial.manager.name = qt.managerName;
+      if (qt.managerDesignation) initial.manager.designation = qt.managerDesignation;
+      if (qt.managerPhone) initial.manager.mobile = qt.managerPhone;
+      if (qt.managerEmail) initial.manager.email = qt.managerEmail;
+
+      if (qt.items && qt.items.length > 0) {
+        const enabledKeys = new Set(qt.items.map((it) => SERVICE_TO_KEY[it.service] || ''));
         initial.products = initial.products.map((p) => {
-          const matchItem = initialQuotation.items.find(
-            (it) => SERVICE_TO_KEY[it.service] === p.key
-          );
+          const matchItem = qt.items.find((it) => SERVICE_TO_KEY[it.service] === p.key);
           if (matchItem) {
             return {
               ...p,
@@ -2205,9 +2208,22 @@ export function QuotationModal({
           };
         });
       }
+    } else {
+      initial.client.proposalNumber = makeFreshProposalNumber();
     }
 
-    setData(initial);
+    return initial;
+  };
+
+  const loadQuotationIntoState = (qt: LeadQuotation) => {
+    setData(buildQuotationEditorState(qt));
+  };
+
+  // Sync initial state from Lead or existing quotation
+  useEffect(() => {
+    if (!open) return;
+    setData(buildQuotationEditorState(initialQuotation));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, lead, initialQuotation]);
 
   // Handle Zoom Fit Width & Fit Page
@@ -2335,7 +2351,7 @@ export function QuotationModal({
     [enabledProducts]
   );
 
-  const handleSaveToLead = async () => {
+  const buildCurrentQuotation = (): LeadQuotation => {
     const KEY_TO_SVC: Record<string, string> = Object.fromEntries(
       Object.entries(SERVICE_TO_KEY).map(([k, v]) => [v, k])
     );
@@ -2359,12 +2375,10 @@ export function QuotationModal({
     const subtotal = grandTotal / 1.18;
     const gstAmount = grandTotal - subtotal;
 
-    const quotationToSave: LeadQuotation = {
-      quotationNumber: data.client.proposalNumber || 'ISS/2026/001',
+    return {
+      quotationNumber: data.client.proposalNumber || makeFreshProposalNumber(),
       quotationDate: data.client.date || new Date().toISOString().split('T')[0],
-      validUntil: new Date(Date.now() + 15 * 86400000)
-        .toISOString()
-        .split('T')[0],
+      validUntil: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
       clientName: data.client.clientName,
       companyName: data.client.companyName,
       phone: lead?.phone || '',
@@ -2382,8 +2396,10 @@ export function QuotationModal({
       managerEmail: data.manager.email,
       updatedAt: new Date().toISOString(),
     };
+  };
 
-    await onSave(quotationToSave);
+  const handleSaveToLead = async () => {
+    await onSave(buildCurrentQuotation());
     onClose();
   };
 
@@ -2399,67 +2415,32 @@ export function QuotationModal({
     text: string;
   } | null>(null);
 
-  const openEmailModal = () => {
-    const KEY_TO_SVC: Record<string, string> = Object.fromEntries(
-      Object.entries(SERVICE_TO_KEY).map(([k, v]) => [v, k])
-    );
-    const items: ServicePriceItem[] = enabledProducts.map((p) => {
-      const firstRate = Number(p.tables[0]?.rateValue) || 0.1;
-      const setup = parseNumber(p.pricing.setup);
-      const monthly = parseNumber(p.pricing.monthly);
-      const lineTotal = computeProductTotal(p.pricing);
-      return {
-        service: KEY_TO_SVC[p.key] || p.title,
-        rate: firstRate,
-        count: 100000,
-        amount: lineTotal,
-        setupCharges: setup,
-        monthlyCharges: monthly,
-        bullets: p.bullets,
-      };
-    });
-
-    const subtotalCalc = Number((grandTotal / 1.18).toFixed(2));
-    const gstAmountCalc = Number((grandTotal - subtotalCalc).toFixed(2));
-    const currentQt: LeadQuotation = {
-      quotationNumber: data.client.proposalNumber || 'ISS/2026/001',
-      quotationDate: data.client.date || new Date().toISOString().slice(0, 10),
-      validUntil: new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10),
-      clientName: data.client.clientName,
-      companyName: data.client.companyName,
-      phone: lead?.phone || '',
-      email: lead?.email || '',
-      channel: items[0]?.service || 'Bulk SMS (DLT)',
-      items,
-      subtotal: subtotalCalc,
-      gstPercent: 18,
-      gstAmount: gstAmountCalc,
-      totalAmount: Number(grandTotal.toFixed(2)),
-      termsNotes: 'Payment terms: 100% advance or as mutually agreed. Validity: 15 days.',
-      managerName: data.manager.name,
-      managerDesignation: data.manager.designation,
-      managerPhone: data.manager.mobile,
-      managerEmail: data.manager.email,
-      updatedAt: new Date().toISOString(),
-    };
+  const openEmailModal = async () => {
+    const currentQt = buildCurrentQuotation();
 
     if (onOpenEmailComposer) {
-      onOpenEmailComposer(currentQt);
+      await onOpenEmailComposer(currentQt);
       return;
     }
 
     const toEmail = lead?.email || '';
     const ccEmail = [data.manager.email || 'sales@immenseair.in', 'vikram.admin@nexuscrm.in'].filter(Boolean).join(',');
-    const subject = `Business Proposal & Quotation ${data.client.proposalNumber} — Immense Air Pvt Ltd`;
-    const servicesList = enabledProducts.map((p) => `• ${PRODUCT_NAMES[p.key] || p.title}`).join('\n');
-    const textBody = `Dear ${data.client.clientName || 'Partner'},\n\nGreetings from Immense Air Pvt Ltd (Immense Smart Solution)!\n\nWe are pleased to present our communication solutions proposal for ${data.client.companyName || 'your esteemed business'}.\n\nProposal Details:\nProposal No: ${data.client.proposalNumber}\nDate: ${data.client.date || new Date().toLocaleDateString('en-GB')}\nSelected Services:\n${servicesList}\nGrand Total: ₹ ${grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })} (inclusive of 18% GST)\n\nPlease review the attached official PDF proposal and let us know if you need any clarification or customization.\n\nWarm regards,\n${data.manager.name}\n${data.manager.designation}\nImmense Air Pvt Ltd\nMobile: ${data.manager.mobile}\nEmail: ${data.manager.email}\nWebsite: www.immenseair.in`;
+    const subject = `Business Proposal & Quotation ${currentQt.quotationNumber} — Immense Air Pvt Ltd`;
+    const servicesList = enabledProducts
+      .map((p) => {
+        const lineTotal = computeProductTotal(p.pricing);
+        return `• ${PRODUCT_NAMES[p.key] || p.title} — ₹ ${lineTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+      })
+      .join('\n');
+    const textBody = `Dear ${data.client.clientName || 'Partner'},\n\nGreetings from Immense Air Pvt Ltd (Immense Smart Solution)!\n\nWe are pleased to present our communication solutions proposal for ${data.client.companyName || 'your esteemed business'}.\n\nProposal Details:\nProposal No: ${currentQt.quotationNumber}\nDate: ${currentQt.quotationDate}\nValid Until: ${currentQt.validUntil}\nSelected Services:\n${servicesList}\nGrand Total: ₹ ${grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })} (inclusive of 18% GST)\n\nPlease review the proposal and let us know if you need any clarification or customization.\n\nWarm regards,\n${data.manager.name}\n${data.manager.designation}\nImmense Air Pvt Ltd\nMobile: ${data.manager.mobile}\nEmail: ${data.manager.email}\nWebsite: www.immenseair.in`;
 
-    setEmailTo(toEmail);
-    setEmailCc(ccEmail);
-    setEmailSubject(subject);
-    setEmailBody(textBody);
-    setEmailAttachPdf(true);
-    setEmailModalOpen(true);
+    const hostingerUrl =
+      `https://mail.hostinger.com/?_task=mail&_action=compose` +
+      `&_to=${encodeURIComponent(toEmail)}` +
+      `&_cc=${encodeURIComponent(ccEmail)}` +
+      `&_subject=${encodeURIComponent(subject)}` +
+      `&_body=${encodeURIComponent(textBody)}`;
+    window.open(hostingerUrl, '_blank');
   };
 
   const handleSendEmail = async () => {
@@ -2587,16 +2568,26 @@ export function QuotationModal({
     }
   };
 
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
+    const currentQt = buildCurrentQuotation();
     let cleanPhone = (lead?.phone || '').replace(/[^0-9]/g, '');
     if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
-    const servicesList = enabledProducts.map((p) => `• ${PRODUCT_NAMES[p.key] || p.title}`).join('\n');
-    const message = `Hello *${data.client.clientName || 'Sir/Madam'}*,\n\nGreetings from *Immense Air Pvt Ltd*!\n\nHere is your official *Business Proposal*:\n📄 *Proposal No:* ${data.client.proposalNumber}\n🏢 *Company:* ${data.client.companyName}\n\n*Services Included:*\n${servicesList}\n\n💰 *Grand Total:* ₹ ${grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}\n\nFor any queries, feel free to reach out to:\n👤 *${data.manager.name}* (${data.manager.designation})\n📞 ${data.manager.mobile} | ✉️ ${data.manager.email}\n\nThank you for choosing Immense Air!`;
+    const servicesList = enabledProducts
+      .map((p) => {
+        const lineTotal = computeProductTotal(p.pricing);
+        return `• *${PRODUCT_NAMES[p.key] || p.title}* — ₹ ${lineTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+      })
+      .join('\n');
+    const message = `Hello *${data.client.clientName || 'Sir/Madam'}*,\n\nGreetings from *Immense Air Pvt Ltd*!\n\nHere is your official *Business Proposal*:\n📄 *Proposal No:* ${currentQt.quotationNumber}\n📅 *Date:* ${currentQt.quotationDate}\n⏳ *Valid Until:* ${currentQt.validUntil}\n🏢 *Company:* ${data.client.companyName}\n\n*Services & Pricing:*\n${servicesList}\n\n💰 *Grand Total:* ₹ ${grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })} (incl. 18% GST)\n\nFor any queries, feel free to reach out to:\n👤 *${data.manager.name}* (${data.manager.designation})\n📞 ${data.manager.mobile} | ✉️ ${data.manager.email}\n\nThank you for choosing Immense Air!`;
 
     const waUrl = cleanPhone
-      ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`
-      : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+      ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`
+      : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
+
+    if (onSendWhatsApp) {
+      await onSendWhatsApp(currentQt);
+    }
   };
 
   if (!open) return null;
@@ -2621,7 +2612,7 @@ export function QuotationModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div className="hidden text-right sm:block">
                 <p className="text-xs text-brand-ink/60">
                   {enabledProducts.length} products · {totalPages} pages
@@ -2630,6 +2621,52 @@ export function QuotationModal({
                   Grand Total ₹ {grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                 </p>
               </div>
+
+              {quotationHistory && quotationHistory.length > 0 && (
+                <select
+                  aria-label="Past Quotes"
+                  value={
+                    quotationHistory.some((q) => q.quotationNumber === data.client.proposalNumber)
+                      ? data.client.proposalNumber
+                      : ''
+                  }
+                  onChange={(e) => {
+                    const found = quotationHistory.find(
+                      (q) => q.quotationNumber === e.target.value
+                    );
+                    if (found) loadQuotationIntoState(found);
+                  }}
+                  className="rounded-lg border border-brand-line bg-slate-50 px-2.5 py-2 text-xs font-semibold text-slate-700 cursor-pointer max-w-[190px]"
+                  title="Load a previously sent quotation"
+                >
+                  <option value="">Past Quotes ({quotationHistory.length})</option>
+                  {quotationHistory.map((q) => (
+                    <option key={q.quotationNumber} value={q.quotationNumber}>
+                      {q.quotationNumber} • {q.quotationDate} • ₹{Number(q.totalAmount || 0).toLocaleString('en-IN')}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const freshNo = makeFreshProposalNumber();
+                  const todayStr = new Date().toLocaleDateString('en-GB');
+                  setData((prev) => ({
+                    ...prev,
+                    client: {
+                      ...prev.client,
+                      proposalNumber: freshNo,
+                      date: todayStr,
+                    },
+                  }));
+                }}
+                className="rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 text-xs font-semibold text-indigo-800 transition-all cursor-pointer"
+                title="Assign a brand-new proposal number to send another revision"
+              >
+                + New Quote
+              </button>
 
               <button
                 type="button"
@@ -2726,13 +2763,25 @@ export function QuotationModal({
                 type="button"
                 onClick={openEmailModal}
                 className="rounded-lg bg-blue-600 hover:bg-blue-500 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-panel transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
-                title="Send exact quotation proposal on Email"
+                title="Send quotation via Hostinger Webmail"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="5" width="18" height="14" rx="2" />
                   <path d="m3 7 9 6 9-6" />
                 </svg>
                 Send on Mail
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSendWhatsApp}
+                className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-panel transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
+                title="Send quotation directly on WhatsApp Web"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                </svg>
+                Send on WhatsApp
               </button>
 
               <button

@@ -11,6 +11,7 @@ import {
   Clock,
   Eye,
   EyeOff,
+  FileText,
   History,
   LifeBuoy,
   AlertCircle,
@@ -37,8 +38,8 @@ import {
   Send,
   X,
 } from 'lucide-react';
-import { BillingType, CrmDatabase, Lead, OnboardingRequest, PostpaidCycle, ServicePriceItem, TaxType, User } from '@/types/crm';
-import { SERVICE_DEFAULTS } from './QuotationModal';
+import { BillingType, CrmDatabase, Lead, LeadQuotation, OnboardingRequest, PostpaidCycle, ServicePriceItem, TaxType, User } from '@/types/crm';
+import { QuotationModal, SERVICE_DEFAULTS } from './QuotationModal';
 import { fileToDataUrl, formatDateTime, formatINR, Modal, StatusBadge, triggerDirectDownload } from './ui';
 
 
@@ -167,7 +168,61 @@ export function OnboardingSection({
   const [openActionRowId, setOpenActionRowId] = useState<string | null>(null);
   const [onboardSearch, setOnboardSearch] = useState('');
   const [viewCredsItem, setViewCredsItem] = useState<OnboardingRequest | null>(null);
+  const [quoteModalState, setQuoteModalState] = useState<{
+    item: OnboardingRequest;
+    leadProxy: Lead;
+    initial: LeadQuotation | null;
+    history: LeadQuotation[];
+  } | null>(null);
   const isManager = role === 'ADMIN' || role === 'ACCOUNT_MANAGER';
+
+  const openOnboardingQuotation = (item: OnboardingRequest, startFresh: boolean) => {
+    const linkedLead = db.leads.find((l) => l.id === item.leadId) || item.leadData;
+    const rawHistory: LeadQuotation[] = [
+      ...(item.quotationHistory || []),
+      ...(linkedLead?.quotationHistory || []),
+      ...(item.quotation ? [item.quotation] : []),
+      ...(linkedLead?.quotation ? [linkedLead.quotation] : []),
+    ];
+    const seenNos = new Set<string>();
+    const history: LeadQuotation[] = [];
+    for (const q of rawHistory) {
+      if (!q?.quotationNumber || seenNos.has(q.quotationNumber)) continue;
+      seenNos.add(q.quotationNumber);
+      history.push(q);
+    }
+
+    const leadProxy: Lead = {
+      id: linkedLead?.id || item.leadId || item.id,
+      leadDate: linkedLead?.leadDate || item.createdAt.slice(0, 10),
+      clientName: linkedLead?.clientName || item.clientName || item.companyName,
+      companyName: item.companyName || linkedLead?.companyName || 'Client Company',
+      designation: linkedLead?.designation,
+      phone: linkedLead?.phone || item.clientPhone || '',
+      email: linkedLead?.email || item.clientEmail || '',
+      source: linkedLead?.source || 'Onboarded Client',
+      serviceInterest: linkedLead?.serviceInterest || (item.services || []).join(', ') || 'Bulk SMS (DLT)',
+      status: linkedLead?.status || 'ONBOARDED',
+      selectedServices: linkedLead?.selectedServices || item.services,
+      serviceItems:
+        (item.serviceItems && item.serviceItems.length > 0 ? item.serviceItems : linkedLead?.serviceItems) || [],
+      quotation: history[0] || null,
+      quotationHistory: history,
+      assignedToAgentId: linkedLead?.assignedToAgentId || item.agentId || null,
+      assignedToAgentName: linkedLead?.assignedToAgentName || item.agentName || null,
+      uploadedBy: linkedLead?.uploadedBy || item.agentName || 'CRM',
+      callLogs: linkedLead?.callLogs || [],
+      createdAt: linkedLead?.createdAt || item.createdAt,
+      updatedAt: item.updatedAt,
+    };
+
+    setQuoteModalState({
+      item,
+      leadProxy,
+      initial: startFresh ? null : history[0] || null,
+      history,
+    });
+  };
 
   const [openForm, setOpenForm] = useState(false);
   const [companyName, setCompanyName] = useState('');
@@ -919,6 +974,11 @@ export function OnboardingSection({
                         <div className="text-xs font-mono text-indigo-700 mt-0.5">
                           @{item.username}
                         </div>
+                        {!isSupport && ((item.quotationHistory?.length || 0) > 0 || item.quotation) && (
+                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold">
+                            📄 {item.quotationHistory?.length || 1} Quote(s)
+                          </span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 text-xs text-slate-700 max-w-[200px]">
                         {item.billingEntity || '—'}
@@ -1014,7 +1074,7 @@ export function OnboardingSection({
                                 className="fixed inset-0 z-30"
                                 onClick={() => setOpenActionRowId(null)}
                               />
-                              <div className="absolute right-0 top-9 z-40 w-52 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 text-left space-y-0.5">
+                              <div className="absolute right-full top-0 mr-2 z-40 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 text-left space-y-0.5">
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -1026,6 +1086,35 @@ export function OnboardingSection({
                                   <Key className="w-3.5 h-3.5 text-[#F2591F]" />
                                   Login Details
                                 </button>
+
+                                {!isSupport && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenActionRowId(null);
+                                        openOnboardingQuotation(item, true);
+                                      }}
+                                      className="w-full px-3 py-2 rounded-xl hover:bg-blue-50 text-xs font-bold text-blue-700 flex items-center gap-2"
+                                    >
+                                      <FileText className="w-3.5 h-3.5 text-blue-600" />
+                                      Send New Quote
+                                    </button>
+                                    {((item.quotationHistory?.length || 0) > 0 || item.quotation) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenActionRowId(null);
+                                          openOnboardingQuotation(item, false);
+                                        }}
+                                        className="w-full px-3 py-2 rounded-xl hover:bg-emerald-50 text-xs font-bold text-emerald-700 flex items-center gap-2"
+                                      >
+                                        <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                                        View / Resend Quotes ({item.quotationHistory?.length || 1})
+                                      </button>
+                                    )}
+                                  </>
+                                )}
 
                                 <button
                                   type="button"
@@ -2229,6 +2318,31 @@ export function OnboardingSection({
             });
           }
 
+          // B2. Recorded Quotation History on Onboarded Client (if not already in callLogs)
+          if (!isSupport) {
+            const onbQuotes: LeadQuotation[] =
+              viewHistoryItem.quotationHistory ||
+              (viewHistoryItem.quotation ? [viewHistoryItem.quotation] : []);
+            for (const qt of onbQuotes) {
+              const alreadyLogged = events.some(
+                (ev) => ev.category === 'LEAD_CALLS' && ev.summary.includes(qt.quotationNumber)
+              );
+              if (!alreadyLogged) {
+                events.push({
+                  id: `onb-qt-${viewHistoryItem.id}-${qt.quotationNumber}`,
+                  category: 'LEAD_CALLS',
+                  badgeLabel: '📄 Quotation',
+                  badgeColor: 'bg-violet-100 text-violet-900 border-violet-300',
+                  title: `Quotation ${qt.quotationNumber} (${qt.channel || 'Email + WhatsApp'})`,
+                  actor: qt.managerName || viewHistoryItem.agentName,
+                  timestamp: qt.updatedAt || qt.quotationDate || viewHistoryItem.updatedAt,
+                  summary: `Proposal ${qt.quotationNumber} (${(qt.items || []).map((i) => i.service).join(', ')}) sent via ${qt.channel || 'CRM'}.`,
+                  amountText: qt.totalAmount ? `Quotation: ₹${qt.totalAmount.toLocaleString('en-IN')}` : undefined,
+                });
+              }
+            }
+          }
+
           // C. Onboarding & Portal Credentials Provisioned Events
           events.push({
             id: `onb-init-${viewHistoryItem.id}`,
@@ -2926,6 +3040,122 @@ export function OnboardingSection({
           </div>
         )}
       </Modal>
+
+      {/* Generate / Send Multiple Quotations Modal for Onboarded Clients */}
+      <QuotationModal
+        open={Boolean(quoteModalState)}
+        onClose={() => setQuoteModalState(null)}
+        lead={quoteModalState?.leadProxy || null}
+        initialQuotation={quoteModalState?.initial || null}
+        quotationHistory={quoteModalState?.history || []}
+        managerDefaults={{
+          name: currentUser.name,
+          designation: currentUser.designation,
+          phone: currentUser.phone,
+          email: currentUser.mailConfig?.email || currentUser.email,
+        }}
+        onSave={async (updatedQt) => {
+          if (!quoteModalState) return;
+          await onAction('SAVE_QUOTATION', {
+            leadId: quoteModalState.item.leadId,
+            onboardingId: quoteModalState.item.id,
+            quotation: updatedQt,
+          });
+        }}
+        onOpenEmailComposer={async (updatedQt) => {
+          if (!quoteModalState) return;
+          const item = quoteModalState.item;
+          const toEmail =
+            quoteModalState.leadProxy.email || item.clientEmail || updatedQt.email || '';
+          const activeEmail =
+            currentUser.mailConfig?.email ||
+            currentUser.email ||
+            updatedQt.managerEmail ||
+            'parvej@immenseair.in';
+          const activeName = currentUser.name || updatedQt.managerName || 'Account Manager';
+          const activeDesignation =
+            currentUser.designation ||
+            (currentUser.role === 'ADMIN'
+              ? 'General Manager'
+              : updatedQt.managerDesignation || 'Sales & Marketing Manager');
+          const activePhone = currentUser.phone || updatedQt.managerPhone || '+91 9768566466';
+
+          const customSignature = currentUser.mailSignature || currentUser.mailConfig?.signature;
+          const dynamicSignature = customSignature
+            ? customSignature
+            : `Warm regards,\n${activeName}\n${activeDesignation}\nImmense Air Pvt Ltd (Immense Smart Solutions)\nMobile: ${activePhone} | Email: ${activeEmail}\nWebsite: www.immenseair.in`;
+
+          const ccEmail = [activeEmail, 'vikram.admin@nexuscrm.in'].filter(Boolean).join(',');
+          const rawName = (quoteModalState.leadProxy.clientName || updatedQt.clientName || '').trim();
+          const clientGreeting = rawName ? `Dear ${rawName} Sir/Ma'am,` : "Dear Sir/Ma'am,";
+          const defaultSubject = `Bulk SMS & Communication Proposal | Immense Smart Solutions — ${updatedQt.quotationNumber}`;
+          const servicesList = (updatedQt.items || [])
+            .map((it) => `• ${it.service} — ₹ ${Number(it.amount || 0).toLocaleString('en-IN')}`)
+            .join('\n');
+
+          const defaultBody = `${clientGreeting}
+
+Greetings from Immense Smart Solutions!
+
+Here is your official proposal for ${item.companyName}:
+
+Proposal Details:
+• Proposal No: ${updatedQt.quotationNumber}
+• Date: ${updatedQt.quotationDate}
+• Valid Until: ${updatedQt.validUntil}
+• Services & Pricing:
+${servicesList}
+• Total Amount: ₹ ${updatedQt.totalAmount.toLocaleString('en-IN')} (incl. ${updatedQt.gstPercent}% GST)
+
+Let's connect and explore how we can scale your campaigns further!
+
+${dynamicSignature}`;
+
+          const hostingerUrl =
+            `https://mail.hostinger.com/?_task=mail&_action=compose` +
+            `&_to=${encodeURIComponent(toEmail)}` +
+            `&_cc=${encodeURIComponent(ccEmail)}` +
+            `&_subject=${encodeURIComponent(defaultSubject)}` +
+            `&_body=${encodeURIComponent(defaultBody)}`;
+          window.open(hostingerUrl, '_blank');
+
+          const mailQt = { ...updatedQt, channel: 'Email' };
+          await onAction('SAVE_QUOTATION', {
+            leadId: item.leadId,
+            onboardingId: item.id,
+            quotation: mailQt,
+          });
+          await onAction('LOG_QUOTATION_SENT', {
+            leadId: item.leadId,
+            onboardingId: item.id,
+            proposalNumber: updatedQt.quotationNumber,
+            channel: 'Email',
+            to: toEmail,
+            amount: updatedQt.totalAmount,
+            quotation: mailQt,
+          });
+          setQuoteModalState(null);
+        }}
+        onSendWhatsApp={async (updatedQt) => {
+          if (!quoteModalState) return;
+          const item = quoteModalState.item;
+          const waQt = { ...updatedQt, channel: 'WhatsApp' };
+          await onAction('SAVE_QUOTATION', {
+            leadId: item.leadId,
+            onboardingId: item.id,
+            quotation: waQt,
+          });
+          await onAction('LOG_QUOTATION_SENT', {
+            leadId: item.leadId,
+            onboardingId: item.id,
+            proposalNumber: updatedQt.quotationNumber,
+            channel: 'WhatsApp',
+            to: quoteModalState.leadProxy.phone || item.clientPhone || updatedQt.phone || '',
+            amount: updatedQt.totalAmount,
+            quotation: waQt,
+          });
+        }}
+      />
 
     </div>
   );

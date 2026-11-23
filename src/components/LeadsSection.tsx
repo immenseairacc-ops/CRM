@@ -1075,7 +1075,9 @@ ${dynamicSignature}`;
                         )}
                         {lead.quotationSent && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                            Quotation Sent
+                            {(lead.quotationHistory?.length || 0) > 1
+                              ? `Quotation Sent ×${lead.quotationHistory!.length}`
+                              : 'Quotation Sent'}
                             {lead.quotationAmount
                               ? ` (${formatINR(lead.quotationAmount)})`
                               : ''}
@@ -1245,6 +1247,24 @@ ${dynamicSignature}`;
                                 <FileText className="w-3.5 h-3.5 text-blue-600" />
                                 {lead.quotation ? 'Preview / Edit Quote' : 'Generate Quote'}
                               </button>
+                              {lead.quotation && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionMenuId(null);
+                                    setQuotationModalState({
+                                      lead,
+                                      initial: null,
+                                      startInEdit: true,
+                                      fromCallModal: false,
+                                    });
+                                  }}
+                                  className="w-full px-3 py-2 rounded-xl hover:bg-emerald-50 text-xs font-semibold text-emerald-700 flex items-center gap-2"
+                                >
+                                  <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                                  Send New Quote
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => {
@@ -3054,6 +3074,16 @@ ${dynamicSignature}`;
         lead={quotationModalState?.lead || null}
         initialQuotation={quotationModalState?.initial || null}
         startInEdit={quotationModalState?.startInEdit}
+        quotationHistory={
+          quotationModalState?.lead?.quotationHistory ||
+          (quotationModalState?.lead?.quotation ? [quotationModalState.lead.quotation] : [])
+        }
+        managerDefaults={{
+          name: currentUser.name,
+          designation: currentUser.designation,
+          phone: currentUser.phone,
+          email: currentUser.mailConfig?.email || currentUser.email,
+        }}
         onSave={async (updatedQt) => {
           if (!quotationModalState) return;
           if (quotationModalState.fromCallModal) {
@@ -3070,7 +3100,7 @@ ${dynamicSignature}`;
             });
           }
         }}
-        onOpenEmailComposer={(updatedQt) => {
+        onOpenEmailComposer={async (updatedQt) => {
           const leadToUse = quotationModalState?.lead || activeLead;
           const toEmail = leadToUse?.email || updatedQt.email || '';
           const activeEmail = currentUser.mailConfig?.email || currentUser.email || updatedQt.managerEmail || 'parvej@immenseair.in';
@@ -3120,25 +3150,68 @@ We're committed to delivering real results with:
 
 Let's connect and explore how we can boost your sales and engagement!
 
-Please find your official proposal PDF attached with this email.
+Please find your official proposal details above (you can attach the downloaded PDF if needed).
 
 ${dynamicSignature}`;
 
-          // Close QuotationModal and open full Email Preview & Composer with File Upload!
+          const hostingerUrl =
+            `https://mail.hostinger.com/?_task=mail&_action=compose` +
+            `&_to=${encodeURIComponent(toEmail)}` +
+            `&_cc=${encodeURIComponent(ccEmail)}` +
+            `&_subject=${encodeURIComponent(defaultSubject)}` +
+            `&_body=${encodeURIComponent(defaultBody)}`;
+          window.open(hostingerUrl, '_blank');
+
+          const mailQt = { ...updatedQt, channel: 'Email' };
+          if (leadToUse) {
+            await onAction('SAVE_QUOTATION', {
+              leadId: leadToUse.id,
+              quotation: mailQt,
+            });
+            await onAction('LOG_QUOTATION_SENT', {
+              leadId: leadToUse.id,
+              proposalNumber: updatedQt.quotationNumber,
+              channel: 'Email',
+              to: toEmail,
+              amount: updatedQt.totalAmount,
+              quotation: mailQt,
+            });
+          }
+          if (quotationModalState?.fromCallModal) {
+            setDraftQuotation(mailQt);
+            setServiceItems(updatedQt.items);
+            setSelectedServices(updatedQt.items.map((i) => i.service));
+            setQuotationSent(true);
+            setQuotationChannel('Email');
+            setQuotationAmount(String(updatedQt.totalAmount));
+          }
           setQuotationModalState(null);
-          setEmailPreviewModal({
-            open: true,
-            to: toEmail,
-            cc: ccEmail,
-            subject: defaultSubject,
-            body: defaultBody,
-            proposalNumber: updatedQt.quotationNumber,
-            attachPdf: true,
-            quotation: updatedQt,
-            sending: false,
-            customUploadedFile: null,
-            customSignatureHtml: currentUser.mailSignatureHtml || currentUser.mailConfig?.signatureHtml || null,
-          });
+        }}
+        onSendWhatsApp={async (updatedQt) => {
+          const leadToUse = quotationModalState?.lead || activeLead;
+          const waQt = { ...updatedQt, channel: 'WhatsApp' };
+          if (leadToUse) {
+            await onAction('SAVE_QUOTATION', {
+              leadId: leadToUse.id,
+              quotation: waQt,
+            });
+            await onAction('LOG_QUOTATION_SENT', {
+              leadId: leadToUse.id,
+              proposalNumber: updatedQt.quotationNumber,
+              channel: 'WhatsApp',
+              to: leadToUse.phone || updatedQt.phone || '',
+              amount: updatedQt.totalAmount,
+              quotation: waQt,
+            });
+          }
+          if (quotationModalState?.fromCallModal) {
+            setDraftQuotation(waQt);
+            setServiceItems(updatedQt.items);
+            setSelectedServices(updatedQt.items.map((i) => i.service));
+            setQuotationSent(true);
+            setQuotationChannel('WhatsApp');
+            setQuotationAmount(String(updatedQt.totalAmount));
+          }
         }}
       />
 

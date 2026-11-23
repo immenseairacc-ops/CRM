@@ -138,6 +138,7 @@ export interface Lead {
   selectedServices?: string[];
   serviceItems?: ServicePriceItem[];
   quotation?: LeadQuotation | null;
+  quotationHistory?: LeadQuotation[];
   quotationSent?: boolean;
   quotationChannel?: string;
   quotationAmount?: number;
@@ -233,6 +234,8 @@ export interface OnboardingRequest {
   postpaidCycle?: PostpaidCycle; // 10 days, 15 days, 20 days, 25 days, 30 days, 45 days
   services: string[];
   serviceItems?: ServicePriceItem[];
+  quotation?: LeadQuotation | null;
+  quotationHistory?: LeadQuotation[];
   whatsappMarketingRate?: number; // Rate for WhatsApp Marketing (per msg)
   whatsappUtilityRate?: number;   // Rate for WhatsApp Utility (per msg)
   obdRate?: number;               // Rate for OBD / Voice (per call/pulse)

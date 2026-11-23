@@ -485,9 +485,21 @@ export async function POST(req: NextRequest) {
       }
 
       case 'SAVE_QUOTATION': {
-        const lead = db.leads.find((l) => l.id === payload.leadId);
-        if (!lead) {
-          return NextResponse.json({ ok: false, error: 'Lead not found.' }, { status: 404 });
+        const onboarding = payload.onboardingId
+          ? db.onboardingRequests.find((o) => o.id === payload.onboardingId)
+          : payload.leadId
+          ? db.onboardingRequests.find((o) => o.leadId === payload.leadId)
+          : undefined;
+        const lead = payload.leadId
+          ? db.leads.find((l) => l.id === payload.leadId)
+          : onboarding?.leadId
+          ? db.leads.find((l) => l.id === onboarding.leadId)
+          : undefined;
+        if (!lead && !onboarding) {
+          return NextResponse.json(
+            { ok: false, error: 'Lead or Onboarded Client not found.' },
+            { status: 404 }
+          );
         }
         const quotation = payload.quotation as LeadQuotation | undefined;
         if (!quotation || !Array.isArray(quotation.items) || quotation.items.length === 0) {
@@ -520,6 +532,11 @@ export async function POST(req: NextRequest) {
         const gstAmount = Number(((subtotal * gstPercent) / 100).toFixed(2));
         const totalAmount = Number((subtotal + gstAmount).toFixed(2));
 
+        const fallbackClientName = lead?.clientName || onboarding?.clientName || onboarding?.companyName || 'Client';
+        const fallbackCompanyName = lead?.companyName || onboarding?.companyName || 'Company';
+        const fallbackPhone = lead?.phone || onboarding?.clientPhone || '';
+        const fallbackEmail = lead?.email || onboarding?.clientEmail || '';
+
         const savedQuotation: LeadQuotation = {
           quotationNumber:
             String(quotation.quotationNumber || '').trim() ||
@@ -529,10 +546,10 @@ export async function POST(req: NextRequest) {
             quotation.validUntil ||
               new Date(Date.now() + 15 * 86_400_000).toISOString().slice(0, 10)
           ),
-          clientName: String(quotation.clientName || lead.clientName).trim(),
-          companyName: String(quotation.companyName || lead.companyName).trim(),
-          phone: String(quotation.phone || lead.phone).trim(),
-          email: String(quotation.email || lead.email).trim(),
+          clientName: String(quotation.clientName || fallbackClientName).trim(),
+          companyName: String(quotation.companyName || fallbackCompanyName).trim(),
+          phone: String(quotation.phone || fallbackPhone).trim(),
+          email: String(quotation.email || fallbackEmail).trim(),
           items: normalizedItems,
           subtotal,
           gstPercent,
@@ -549,19 +566,14 @@ export async function POST(req: NextRequest) {
           updatedAt: now,
         };
 
-        lead.quotation = savedQuotation;
-        lead.serviceItems = normalizedItems;
-        lead.selectedServices = normalizedItems.map((i) => i.service);
-        lead.serviceInterest = lead.selectedServices.join(', ');
-        lead.quotationSent = true;
-        lead.quotationChannel = savedQuotation.channel;
-        lead.quotationAmount = savedQuotation.totalAmount;
-        lead.quotationSentDate = now;
-        lead.updatedAt = now;
+        const upsertHistory = (prev?: LeadQuotation[]) => [
+          savedQuotation,
+          ...(prev || []).filter((q) => q.quotationNumber !== savedQuotation.quotationNumber),
+        ];
 
-        lead.callLogs.unshift({
+        const logEntry = {
           id: makeId('log'),
-          type: 'NOTE',
+          type: 'NOTE' as const,
           summary: `Quotation ${savedQuotation.quotationNumber} saved by ${actor.name} — Total ₹${savedQuotation.totalAmount.toLocaleString('en-IN')} (incl. ${gstPercent}% GST)`,
           serviceItems: normalizedItems,
           quotationSent: true,
@@ -569,55 +581,122 @@ export async function POST(req: NextRequest) {
           quotationAmount: savedQuotation.totalAmount,
           quotationSentDate: now,
           createdBy: actor.name,
-            creatorRole: actorRole,
+          creatorRole: actorRole,
           createdAt: now,
-        });
+        };
+
+        if (lead) {
+          lead.quotation = savedQuotation;
+          lead.quotationHistory = upsertHistory(lead.quotationHistory);
+          lead.serviceItems = normalizedItems;
+          lead.selectedServices = normalizedItems.map((i) => i.service);
+          lead.serviceInterest = lead.selectedServices.join(', ');
+          lead.quotationSent = true;
+          lead.quotationChannel = savedQuotation.channel;
+          lead.quotationAmount = savedQuotation.totalAmount;
+          lead.quotationSentDate = now;
+          lead.updatedAt = now;
+          lead.callLogs.unshift(logEntry);
+        }
+
+        if (onboarding) {
+          onboarding.quotation = savedQuotation;
+          onboarding.quotationHistory = upsertHistory(onboarding.quotationHistory);
+          onboarding.updatedAt = now;
+          if (onboarding.leadData && (!lead || onboarding.leadData.id !== lead.id)) {
+            onboarding.leadData.callLogs = onboarding.leadData.callLogs || [];
+            onboarding.leadData.callLogs.unshift({ ...logEntry, id: makeId('log') });
+          }
+        }
 
         pushNotification(db.notifications, {
           targetRoles: ['ADMIN', 'ACCOUNT_MANAGER'],
           title: `Quotation Generated/Updated: ${savedQuotation.quotationNumber}`,
           message: `${actor.name} saved quotation ${savedQuotation.quotationNumber} for ${savedQuotation.companyName} (₹${savedQuotation.totalAmount.toLocaleString('en-IN')}).`,
           type: 'LEAD',
-          relatedId: lead.id,
+          relatedId: lead?.id || onboarding?.id || '',
         });
         break;
       }
 
       case 'LOG_QUOTATION_SENT': {
-        const lead = db.leads.find((l) => l.id === payload.leadId);
-        if (!lead) {
-          return NextResponse.json({ ok: false, error: 'Lead not found.' }, { status: 404 });
+        const onboarding = payload.onboardingId
+          ? db.onboardingRequests.find((o) => o.id === payload.onboardingId)
+          : payload.leadId
+          ? db.onboardingRequests.find((o) => o.leadId === payload.leadId)
+          : undefined;
+        const lead = payload.leadId
+          ? db.leads.find((l) => l.id === payload.leadId)
+          : onboarding?.leadId
+          ? db.leads.find((l) => l.id === onboarding.leadId)
+          : undefined;
+        if (!lead && !onboarding) {
+          return NextResponse.json(
+            { ok: false, error: 'Lead or Onboarded Client not found.' },
+            { status: 404 }
+          );
         }
         const proposalNumber = String(payload.proposalNumber || 'Proposal');
         const channel = String(payload.channel || 'Email');
-        const toEmail = String(payload.to || lead.email || '');
-        const amount = Number(payload.amount || lead.quotation?.totalAmount || 0);
+        const toTarget = String(
+          payload.to || lead?.email || lead?.phone || onboarding?.clientEmail || onboarding?.clientPhone || ''
+        );
+        const passedQt = payload.quotation as LeadQuotation | undefined;
+        const amount = Number(
+          payload.amount || passedQt?.totalAmount || lead?.quotation?.totalAmount || onboarding?.quotation?.totalAmount || 0
+        );
 
-        lead.quotationSent = true;
-        lead.quotationChannel = channel;
-        lead.quotationSentDate = now;
-        lead.updatedAt = now;
-        if (amount > 0) lead.quotationAmount = amount;
-
-        lead.callLogs.unshift({
+        const logType: 'NOTE' | 'EMAIL' = channel.toLowerCase().includes('whatsapp') ? 'NOTE' : 'EMAIL';
+        const logEntry = {
           id: makeId('log'),
-          type: 'EMAIL',
-          summary: `Quotation Proposal (${proposalNumber}) sent via ${channel} to ${toEmail}${amount > 0 ? ` (₹${amount.toLocaleString('en-IN')})` : ''} by ${actor.name}.`,
+          type: logType,
+          summary: `Quotation Proposal (${proposalNumber}) sent via ${channel} to ${toTarget || 'client'}${amount > 0 ? ` (₹${amount.toLocaleString('en-IN')})` : ''} by ${actor.name}.`,
           quotationSent: true,
           quotationChannel: channel,
           quotationAmount: amount > 0 ? amount : undefined,
           quotationSentDate: now,
           createdBy: actor.name,
-            creatorRole: actorRole,
+          creatorRole: actorRole,
           createdAt: now,
-        });
+        };
 
+        const upsertSentHistory = (prev: LeadQuotation[] | undefined, qt: LeadQuotation) => [
+          { ...qt, channel, updatedAt: now },
+          ...(prev || []).filter((q) => q.quotationNumber !== qt.quotationNumber),
+        ];
+
+        if (lead) {
+          lead.quotationSent = true;
+          lead.quotationChannel = channel;
+          lead.quotationSentDate = now;
+          lead.updatedAt = now;
+          if (amount > 0) lead.quotationAmount = amount;
+          if (passedQt) {
+            lead.quotation = { ...passedQt, channel, updatedAt: now };
+            lead.quotationHistory = upsertSentHistory(lead.quotationHistory, passedQt);
+          }
+          lead.callLogs.unshift(logEntry);
+        }
+
+        if (onboarding) {
+          onboarding.updatedAt = now;
+          if (passedQt) {
+            onboarding.quotation = { ...passedQt, channel, updatedAt: now };
+            onboarding.quotationHistory = upsertSentHistory(onboarding.quotationHistory, passedQt);
+          }
+          if (onboarding.leadData && (!lead || onboarding.leadData.id !== lead.id)) {
+            onboarding.leadData.callLogs = onboarding.leadData.callLogs || [];
+            onboarding.leadData.callLogs.unshift({ ...logEntry, id: makeId('log') });
+          }
+        }
+
+        const companyName = lead?.companyName || onboarding?.companyName || 'Client';
         pushNotification(db.notifications, {
           targetRoles: ['ADMIN', 'ACCOUNT_MANAGER'],
-          title: `Quotation Sent: ${lead.companyName}`,
-          message: `${actor.name} sent quotation proposal ${proposalNumber} to ${toEmail}.`,
+          title: `Quotation Sent: ${companyName}`,
+          message: `${actor.name} sent quotation proposal ${proposalNumber} via ${channel} to ${toTarget || companyName}.`,
           type: 'LEAD',
-          relatedId: lead.id,
+          relatedId: lead?.id || onboarding?.id || '',
         });
         break;
       }
