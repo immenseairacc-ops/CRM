@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Immense CRM — WhatsApp & Mail Tab Switcher",
+  "version": "1.0.0",
+  "description": "Switches directly to your already-open WhatsApp Web or Hostinger Mail tab from Immense CRM without opening duplicate tabs.",
+  "permissions": ["tabs"],
+  "host_permissions": [
+    "*://web.whatsapp.com/*",
+    "*://mail.hostinger.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "http://127.0.0.1:3000/*",
+        "https://*.vercel.app/*",
+        "https://*.immenseair.in/*",
+        "https://*.immensesmartsolutions.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

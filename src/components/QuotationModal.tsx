@@ -12,6 +12,7 @@ import React, {
 } from 'react';
 import { Lead, LeadQuotation, ServicePriceItem } from '@/types/crm';
 import { generateQuotationPdfBlob, captureExactQuotationHtmlPdf } from '@/lib/pdfGenerator';
+import { openSmartTab } from '@/lib/openSmartTab';
 import {
   getDefaultQuotationState,
   ProductItem,
@@ -2586,7 +2587,7 @@ export function QuotationModal({
     const waUrl = cleanPhone
       ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`
       : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, 'immense_whatsapp_web');
+    openSmartTab('whatsapp', waUrl);
 
     if (onSendWhatsApp) {
       await onSendWhatsApp(currentQt);

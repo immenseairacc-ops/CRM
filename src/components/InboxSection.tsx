@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { openSmartTab } from '@/lib/openSmartTab';
 import {
   AlertCircle,
   ArrowLeft,
@@ -287,15 +288,15 @@ export function InboxSection({
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-          <a
-            href="https://mail.hostinger.com"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => openSmartTab('hostinger', 'https://mail.hostinger.com')}
             className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
+            title="Switch directly to your already-open Hostinger Mail tab"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             Open Webmail
-          </a>
+          </button>
         </div>
       </div>
 

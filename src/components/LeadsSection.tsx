@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { openSmartTab } from '@/lib/openSmartTab';
 import {
   AlarmClock,
   Calendar,
@@ -536,11 +537,11 @@ ${dynamicSignature}`;
       .join('\n');
     const message = `Hello *${activeLead.clientName || 'Sir/Madam'}*,\n\nGreetings from *Immense Air Pvt Ltd*!\n\nHere is your official *Business Proposal*:\n📄 *Proposal No:* ${draftQuotation.quotationNumber}\n📅 *Date:* ${draftQuotation.quotationDate || ''}\n⏳ *Valid Until:* ${draftQuotation.validUntil || ''}\n🏢 *Company:* ${activeLead.companyName}\n\n*Services & Pricing:*\n${servicesList}\n\n💰 *Grand Total:* ₹ ${draftQuotation.totalAmount.toLocaleString('en-IN')} (incl. ${draftQuotation.gstPercent ?? 18}% GST)\n\n✅ Instant Content Approval\n✅ Dedicated Account Manager & 24/7 Support\n✅ Detailed Reports & Link Tracking\n\nFor any queries, feel free to contact:\n👤 *${draftQuotation.managerName || currentUser.name || 'Account Manager'}* (${draftQuotation.managerDesignation || 'Sales'})\n📞 ${draftQuotation.managerPhone || currentUser.phone || '+91 9768566466'} | ✉️ ${draftQuotation.managerEmail || currentUser.email || 'sales@immenseair.in'}\n\nThank you for choosing Immense Air!`;
 
-    // Always open WhatsApp Web (desktop browser) with chat + full quotation content prefilled
+    // Reuse already-open WhatsApp Web tab via Tab Switcher extension (falls back cleanly to named window)
     const waUrl = cleanPhone
       ? `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`
       : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, 'immense_whatsapp_web');
+    openSmartTab('whatsapp', waUrl);
 
     // Save lead update & log with Quotation Sent via WhatsApp
     const subtotal = serviceItems.reduce((s, i) => s + i.amount, 0);
@@ -2933,6 +2934,15 @@ ${dynamicSignature}`;
               </span>
 
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openSmartTab('hostinger', 'https://mail.hostinger.com')}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition"
+                  title="Switch directly to your already-open Hostinger Mail browser tab"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-600" />
+                  Open Hostinger Tab
+                </button>
                 <button
                   type="button"
                   onClick={() => setEmailPreviewModal(null)}
