@@ -107,6 +107,14 @@ export default function CrmAppPage() {
         );
         const json = await res.json();
         if (json.ok) {
+          if (json.buildVersion && typeof window !== 'undefined') {
+            const prevVer = sessionStorage.getItem('crm_build_version');
+            sessionStorage.setItem('crm_build_version', json.buildVersion);
+            if (prevVer && prevVer !== json.buildVersion) {
+              window.location.reload();
+              return;
+            }
+          }
           setDb(json.data);
         }
       } catch {

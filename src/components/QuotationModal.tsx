@@ -3495,18 +3495,6 @@ export function QuotationModal({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    const clipText = `To: ${emailTo}\nCC: ${emailCc}\nSubject: ${emailSubject}\n\n${emailBody}`;
-                    navigator.clipboard?.writeText(clipText);
-                    window.open('https://mail.hostinger.com/', 'immense_hostinger_mail');
-                  }}
-                  className="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold"
-                  title="Copy content & open your logged-in Hostinger Webmail tab"
-                >
-                  Copy &amp; Open Hostinger Tab
-                </button>
-                <button
-                  type="button"
                   disabled={sendingEmail || !emailTo.trim()}
                   onClick={handleSendEmail}
                   className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold shadow-sm"

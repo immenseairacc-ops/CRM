@@ -2942,19 +2942,6 @@ ${dynamicSignature}`;
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    const clipText = `To: ${emailPreviewModal.to}\nCC: ${emailPreviewModal.cc}\nSubject: ${emailPreviewModal.subject}\n\n${emailPreviewModal.body}`;
-                    navigator.clipboard?.writeText(clipText);
-                    window.open('https://mail.hostinger.com/', 'immense_hostinger_mail');
-                  }}
-                  className="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 transition"
-                  title="Copy content & open your logged-in Hostinger Mail tab"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Copy &amp; Open Hostinger Tab
-                </button>
-                <button
-                  type="button"
                   disabled={emailPreviewModal.sending || !emailPreviewModal.to.trim()}
                   onClick={async () => {
                     setEmailPreviewModal((prev) => (prev ? { ...prev, sending: true } : null));

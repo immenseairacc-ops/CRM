@@ -51,7 +51,11 @@ export async function GET(req: NextRequest) {
     const db = await readDatabaseAsync();
     const sanitized = sanitizeForRole(db, role, userId);
 
-    return NextResponse.json({ ok: true, data: sanitized });
+    return NextResponse.json({
+      ok: true,
+      buildVersion: '2026-11-24-v4',
+      data: sanitized,
+    });
   } catch (error) {
     console.error('GET /api/crm error:', error);
     return NextResponse.json(
