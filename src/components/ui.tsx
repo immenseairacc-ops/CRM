@@ -30,11 +30,11 @@ export const ROLE_META: Record<
     desc: 'Call/mail leads, Hot/Warm/Cold updates, reminders, meets, onboarding & recharge',
   },
   SUPPORT: {
-    label: 'Support Team',
+    label: 'Technical Support',
     short: 'Support',
     color: 'text-amber-700 border-amber-200',
     bg: 'bg-amber-50',
-    desc: 'Approved meet schedule, masked account creation & recharge execution',
+    desc: 'SMS, RCS, WhatsApp, OBD, SMPP technical support, client demo calls & panel account creation',
   },
   BILLING: {
     label: 'Billing Team',
