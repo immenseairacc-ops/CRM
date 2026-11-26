@@ -2139,21 +2139,10 @@ ${dynamicSignature}`;
 
               <div className="w-full sm:w-auto flex flex-wrap items-center gap-2.5 justify-end">
                 <button
-                  type="button"
-                  onClick={handleSendMailAndSave}
-                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition"
+                  type="submit"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition"
                 >
-                  <Mail className="w-4 h-4" />
-                  Send on Mail
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSendWhatsAppAndSave}
-                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition"
-                >
-                  <Send className="w-4 h-4" />
-                  Send on WhatsApp
+                  Save Call &amp; Lead Update
                 </button>
               </div>
             </div>
