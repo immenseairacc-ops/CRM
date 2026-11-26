@@ -5,6 +5,7 @@ import { ArrowUpRight, Check, CheckCircle2, Clock, Headphones, Mail, MailOpen, P
 import errorsData from '@/data/errors.json';
 import { CrmDatabase, Role, User } from '@/types/crm';
 import { formatINR, ROLE_META, StatusBadge } from './ui';
+import { AgentAnalyticsSection } from './AgentAnalyticsSection';
 
 export type NavTab =
   | 'overview'
@@ -1755,6 +1756,11 @@ export function OverviewSection({
           </div>
         </div>
       </div>
+      )}
+
+      {/* Visual Analytics & Review Pie Chart (Day/Week/Custom) for Admin & Account Manager */}
+      {isManager && (
+        <AgentAnalyticsSection db={db} currentUser={currentUser} />
       )}
 
       {/* Team Disposition Breakdown for Admin & Account Manager */}
