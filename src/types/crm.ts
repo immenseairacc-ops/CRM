@@ -86,6 +86,8 @@ export interface ActivityLog {
   quotationChannel?: string;
   quotationAmount?: number;
   quotationSentDate?: string;
+  quotationScreenshotDataUrl?: string;
+  quotationScreenshotName?: string;
   agentCallDate?: string;
   meetDate?: string;
   billingDate?: string;
@@ -143,6 +145,8 @@ export interface Lead {
   quotationChannel?: string;
   quotationAmount?: number;
   quotationSentDate?: string;
+  quotationScreenshotDataUrl?: string;
+  quotationScreenshotName?: string;
   agentCallDate?: string;
   meetDate?: string;
   billingDate?: string;

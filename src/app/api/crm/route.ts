@@ -394,6 +394,12 @@ export async function POST(req: NextRequest) {
           : payload.quotationAmount
           ? Number(payload.quotationAmount)
           : undefined;
+        const quotationScreenshotDataUrl = typeof payload.quotationScreenshotDataUrl === 'string' && payload.quotationScreenshotDataUrl.trim()
+          ? payload.quotationScreenshotDataUrl.trim()
+          : undefined;
+        const quotationScreenshotName = typeof payload.quotationScreenshotName === 'string' && payload.quotationScreenshotName.trim()
+          ? payload.quotationScreenshotName.trim()
+          : undefined;
 
         lead.callConnectStatus = callConnectStatus;
         lead.updatedAt = now;
@@ -412,10 +418,14 @@ export async function POST(req: NextRequest) {
             lead.quotation = { ...quotation, updatedAt: now };
           }
           lead.quotationSent = quotationSent;
-          lead.quotationChannel = quotationSent ? quotationChannel || 'Email' : undefined;
+          lead.quotationChannel = quotationSent ? quotationChannel || 'WhatsApp' : undefined;
           lead.quotationAmount = quotationSent ? quotationAmount : undefined;
           if (quotationSent) {
             lead.quotationSentDate = now;
+            if (quotationScreenshotDataUrl) {
+              lead.quotationScreenshotDataUrl = quotationScreenshotDataUrl;
+              lead.quotationScreenshotName = quotationScreenshotName || 'quotation_proof.jpg';
+            }
           }
         }
 
@@ -465,6 +475,10 @@ export async function POST(req: NextRequest) {
             callConnectStatus === 'CONNECTED' && quotationSent ? quotationAmount : undefined,
           quotationSentDate:
             callConnectStatus === 'CONNECTED' && quotationSent ? now : undefined,
+          quotationScreenshotDataUrl:
+            callConnectStatus === 'CONNECTED' && quotationSent ? quotationScreenshotDataUrl : undefined,
+          quotationScreenshotName:
+            callConnectStatus === 'CONNECTED' && quotationSent ? (quotationScreenshotName || 'quotation_proof.jpg') : undefined,
           agentCallDate: now,
           statusAfter: callConnectStatus === 'CONNECTED' ? nextStatus : lead.status,
           createdBy: actor.name,

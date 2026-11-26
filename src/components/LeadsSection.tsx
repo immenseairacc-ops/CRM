@@ -44,6 +44,7 @@ import {
   User,
 } from '@/types/crm';
 import {
+  fileToDataUrl,
   formatDateTime,
   formatINR,
   Modal,
@@ -156,8 +157,10 @@ export function LeadsSection({
     null
   );
   const [quotationSent, setQuotationSent] = useState<boolean>(false);
-  const [quotationChannel, setQuotationChannel] = useState<string>('Email');
+  const [quotationChannel, setQuotationChannel] = useState<string>('WhatsApp');
   const [quotationAmount, setQuotationAmount] = useState<string>('');
+  const [quotationScreenshotDataUrl, setQuotationScreenshotDataUrl] = useState<string>('');
+  const [quotationScreenshotName, setQuotationScreenshotName] = useState<string>('');
   const [logSummary, setLogSummary] = useState('');
 
   // Standalone / Edit Quotation Modal
@@ -200,6 +203,7 @@ export function LeadsSection({
 
   // Activity History Modal
   const [historyLead, setHistoryLead] = useState<Lead | null>(null);
+  const [zoomedScreenshot, setZoomedScreenshot] = useState<string | null>(null);
 
   // Edit Lead Details Modal
   const [editLead, setEditLead] = useState<Lead | null>(null);
@@ -266,7 +270,7 @@ export function LeadsSection({
     );
     setDraftQuotation(lead.quotation || null);
     setQuotationSent(Boolean(lead.quotationSent));
-    setQuotationChannel(lead.quotationChannel || 'Email + WhatsApp');
+    setQuotationChannel(lead.quotationChannel || 'WhatsApp');
     setQuotationAmount(
       lead.quotation?.totalAmount
         ? String(lead.quotation.totalAmount)
@@ -274,6 +278,8 @@ export function LeadsSection({
         ? String(lead.quotationAmount)
         : ''
     );
+    setQuotationScreenshotDataUrl(lead.quotationScreenshotDataUrl || '');
+    setQuotationScreenshotName(lead.quotationScreenshotName || '');
     setLogSummary('');
   };
 
@@ -590,11 +596,21 @@ ${dynamicSignature}`;
             ? Number(quotationAmount)
             : draftQuotation?.totalAmount || subtotal || undefined
           : undefined,
+      quotationScreenshotDataUrl:
+        callConnectStatus === 'CONNECTED' && quotationSent && quotationScreenshotDataUrl
+          ? quotationScreenshotDataUrl
+          : undefined,
+      quotationScreenshotName:
+        callConnectStatus === 'CONNECTED' && quotationSent && quotationScreenshotName
+          ? quotationScreenshotName
+          : undefined,
       summary: logSummary,
     });
     if (ok) {
       setActiveLead(null);
       setLogSummary('');
+      setQuotationScreenshotDataUrl('');
+      setQuotationScreenshotName('');
     }
   };
 
@@ -2071,6 +2087,127 @@ ${dynamicSignature}`;
                         </button>
                       </div>
                     </div>
+
+                    {/* Screenshot Upload / Paste Proof for Quotation Sent via Mail / WhatsApp */}
+                    <div className="pt-3 border-t border-indigo-200/80 space-y-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                          <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
+                          Quotation Send Proof (WhatsApp / Mail Screenshot)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={quotationSent}
+                              onChange={(e) => setQuotationSent(e.target.checked)}
+                              className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                            />
+                            Mark Quotation Sent
+                          </label>
+                        </div>
+                      </div>
+
+                      {quotationSent && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                              Channel Used
+                            </label>
+                            <select
+                              value={quotationChannel}
+                              onChange={(e) => setQuotationChannel(e.target.value)}
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-800"
+                            >
+                              <option value="WhatsApp">WhatsApp</option>
+                              <option value="Email">Email</option>
+                              <option value="Email + WhatsApp">Email + WhatsApp</option>
+                              <option value="SMS / Direct">SMS / Direct</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                              Upload or Paste Screenshot (Ctrl + V)
+                            </label>
+                            <div
+                              onPaste={(e) => {
+                                const items = e.clipboardData?.items;
+                                if (!items) return;
+                                for (let i = 0; i < items.length; i++) {
+                                  const item = items[i];
+                                  if (item.type.indexOf('image') !== -1) {
+                                    const file = item.getAsFile();
+                                    if (file) {
+                                      fileToDataUrl(file).then((url) => {
+                                        setQuotationScreenshotDataUrl(url);
+                                        setQuotationScreenshotName('pasted_proof_' + Date.now() + '.jpg');
+                                      });
+                                      e.preventDefault();
+                                      break;
+                                    }
+                                  }
+                                }
+                              }}
+                              className={`p-2 rounded-xl border-2 border-dashed transition flex items-center justify-between gap-2 ${
+                                quotationScreenshotDataUrl
+                                  ? 'bg-emerald-50/80 border-emerald-300'
+                                  : 'bg-white border-slate-300 hover:border-indigo-400'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                {quotationScreenshotDataUrl ? (
+                                  <img
+                                    src={quotationScreenshotDataUrl}
+                                    alt="Proof"
+                                    className="w-8 h-8 rounded object-cover border border-emerald-400 cursor-pointer"
+                                    onClick={() => setZoomedScreenshot(quotationScreenshotDataUrl)}
+                                  />
+                                ) : (
+                                  <Upload className="w-4 h-4 text-slate-400 shrink-0" />
+                                )}
+                                <span className="text-[11px] truncate text-slate-700 font-medium">
+                                  {quotationScreenshotName || 'Click to upload or press Ctrl+V to paste'}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                <label className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md text-[10px] font-bold cursor-pointer transition">
+                                  Browse
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        fileToDataUrl(file).then((url) => {
+                                          setQuotationScreenshotDataUrl(url);
+                                          setQuotationScreenshotName(file.name);
+                                        });
+                                      }
+                                    }}
+                                  />
+                                </label>
+                                {quotationScreenshotDataUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setQuotationScreenshotDataUrl('');
+                                      setQuotationScreenshotName('');
+                                    }}
+                                    className="p-1 text-red-500 hover:text-red-700 text-[10px] font-bold"
+                                    title="Remove Screenshot"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -2573,6 +2710,16 @@ ${dynamicSignature}`;
                         Quotation Shared {log.quotationChannel ? `(${log.quotationChannel})` : ''}
                         {log.quotationAmount ? ` — ₹${log.quotationAmount.toLocaleString('en-IN')}` : ''}
                       </span>
+                    )}
+                    {log.quotationScreenshotDataUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setZoomedScreenshot(log.quotationScreenshotDataUrl || null)}
+                        className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold flex items-center gap-1 transition"
+                      >
+                        <Eye className="w-3 h-3 text-blue-600" />
+                        View Proof Screenshot
+                      </button>
                     )}
                   </div>
                 </div>
@@ -3646,6 +3793,37 @@ ${dynamicSignature}`;
           </div>
         )}
       </Modal>
+
+      {/* Zoomed Screenshot Lightbox */}
+      {zoomedScreenshot && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setZoomedScreenshot(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl p-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-2 border-b border-slate-100">
+              <span className="text-xs font-bold text-slate-800">Quotation Send Screenshot Proof</span>
+              <button
+                type="button"
+                onClick={() => setZoomedScreenshot(null)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-2 overflow-auto max-h-[80vh] flex items-center justify-center">
+              <img
+                src={zoomedScreenshot}
+                alt="Quotation Proof Preview"
+                className="max-w-full max-h-[75vh] object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
