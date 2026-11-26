@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRight, Check, CheckCircle2, Clock, Headphones, Mail, MailOpen, Plus } from 'lucide-react';
+import errorsData from '@/data/errors.json';
 import { CrmDatabase, Role, User } from '@/types/crm';
 import { formatINR, ROLE_META, StatusBadge } from './ui';
 
@@ -185,62 +186,125 @@ export function OverviewSection({
     (r) => r.status === 'RECHARGE_COMPLETED'
   ).length;
 
-  // Row 1: 6 Pastel KPI Cards using PNG icons
-  const kpiCards = [
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const supportTodayFollowUpsCount = db.leads.filter(
+    (l) =>
+      l.reminder &&
+      !l.reminder.completed &&
+      l.reminder.datetime &&
+      l.reminder.datetime.slice(0, 10) <= todayStr &&
+      (l.reminder.reminderType === 'SUPPORT_CALL' ||
+        l.reminder.targetRole === 'SUPPORT' ||
+        l.status === 'HOT')
+  ).length;
+  const supportTodayMeetsCount = db.meetRequests.filter(
+    (m) =>
+      (m.status === 'APPROVED' || m.status === 'PENDING_APPROVAL') &&
+      (m.scheduledDate === todayStr || !m.scheduledDate)
+  ).length;
+  const totalErrorCodesCount = (errorsData as unknown as unknown[]).length;
+  const totalTicketsCount = (db.supportTickets || []).length;
+  const openTicketsCount = (db.supportTickets || []).filter(
+    (t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED'
+  ).length;
+
+  // Row 1: KPI Cards using PNG icons (Tailored specifically for SUPPORT role)
+  const kpiCards = isSupport
+    ? [
+        {
+          label: 'Total Tickets',
+          value: totalTicketsCount,
+          sub: `${openTicketsCount} Open / Active`,
+          subColor: 'text-orange-600',
+          cardCls: 'bg-orange-50/80 border-orange-200/80',
+          iconWrap: 'bg-orange-100/90',
+          iconSrc: '/icons/hot.png',
+          tab: 'tickets' as NavTab,
+        },
+        {
+          label: 'Support Follow-ups Today',
+          value: supportTodayFollowUpsCount,
+          sub: 'Technical & queries due',
+          subColor: supportTodayFollowUpsCount > 0 ? 'text-rose-600' : 'text-violet-600',
+          cardCls: 'bg-violet-50/75 border-violet-200/80',
+          iconWrap: 'bg-violet-100/90',
+          iconSrc: '/icons/followup.png',
+          tab: 'reminders' as NavTab,
+        },
+        {
+          label: 'Error Codes',
+          value: totalErrorCodesCount,
+          sub: 'All Operators (Jio, Airtel, Vi, etc.)',
+          subColor: 'text-indigo-600',
+          cardCls: 'bg-indigo-50/75 border-indigo-200/80',
+          iconWrap: 'bg-indigo-100/90',
+          iconSrc: '/icons/pipeline.png',
+          tab: 'errors' as NavTab,
+        },
+        {
+          label: "Today's Meets",
+          value: supportTodayMeetsCount,
+          sub: 'Demos & walkthroughs',
+          subColor: 'text-amber-700',
+          cardCls: 'bg-amber-50/80 border-amber-200/80',
+          iconWrap: 'bg-amber-100/90',
+          iconSrc: '/icons/meeting.png',
+          tab: 'meets' as NavTab,
+        },
+        {
+          label: 'Recharge Requests',
+          value: supportRechargeQueue,
+          sub: `${supportRechargeQueue} ready to credit`,
+          subColor: 'text-cyan-700',
+          cardCls: 'bg-cyan-50/80 border-cyan-200/80',
+          iconWrap: 'bg-cyan-100/90',
+          iconSrc: '/icons/recharge.png',
+          tab: 'recharges' as NavTab,
+        },
+      ]
+    : [
     {
       label:
         role === 'AGENT'
           ? 'My Leads'
-          : isSupport || isBilling
+          : isBilling
           ? 'Active Accounts'
           : 'Total Leads',
-      value: isSupport || isBilling ? onboardCreatedCount : totalLeads,
-      sub:
-        !isSupport && !isBilling ? '+12% this month' : 'Provisioned clients',
+      value: isBilling ? onboardCreatedCount : totalLeads,
+      sub: !isBilling ? '+12% this month' : 'Provisioned clients',
       subColor: 'text-emerald-600',
       cardCls: 'bg-sky-50/80 border-sky-200/80',
       iconWrap: 'bg-sky-100/90',
       iconSrc: '/icons/leads.png',
-      tab: (isSupport || isBilling ? 'onboarding' : 'leads') as NavTab,
+      tab: (isBilling ? 'onboarding' : 'leads') as NavTab,
     },
     {
-      label: isSupport ? 'Open Tickets' : 'Hot Leads',
-      value: isSupport
-        ? (db.supportTickets || []).filter(
-            (t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED'
-          ).length
-        : hotLeads,
-      sub: isSupport ? 'Support / Panel queries' : 'Ready for meet / deal',
+      label: 'Hot Leads',
+      value: hotLeads,
+      sub: 'Ready for meet / deal',
       subColor: 'text-orange-600',
       cardCls: 'bg-orange-50/75 border-orange-200/80',
       iconWrap: 'bg-orange-100/90',
       iconSrc: '/icons/hot.png',
-      tab: (isSupport ? 'tickets' : 'leads') as NavTab,
+      tab: 'leads' as NavTab,
     },
     {
-      label: isSupport ? 'Pending Recharges' : 'Follow-ups',
-      value: isSupport
-        ? db.rechargeRequests.filter((r) => r.status === 'APPROVED_FOR_SUPPORT').length
-        : activeReminders.length,
-      sub: isSupport
-        ? 'Awaiting panel top-up'
-        : dueReminders.length > 0
-        ? `${dueReminders.length} due right now`
-        : 'Callbacks scheduled',
-      subColor: isSupport
-        ? 'text-violet-600'
-        : dueReminders.length > 0
-        ? 'text-rose-600'
-        : 'text-violet-600',
+      label: 'Follow-ups',
+      value: activeReminders.length,
+      sub:
+        dueReminders.length > 0
+          ? `${dueReminders.length} due right now`
+          : 'Callbacks scheduled',
+      subColor: dueReminders.length > 0 ? 'text-rose-600' : 'text-violet-600',
       cardCls: 'bg-violet-50/75 border-violet-200/80',
       iconWrap: 'bg-violet-100/90',
       iconSrc: '/icons/followup.png',
-      tab: (isSupport ? 'recharges' : isBilling ? 'overview' : 'reminders') as NavTab,
+      tab: (isBilling ? 'overview' : 'reminders') as NavTab,
     },
     {
       label: 'Meetings / Visits',
       value: meetCount,
-      sub: isSupport ? 'Confirmed schedule' : 'Client demos',
+      sub: 'Client demos',
       subColor: 'text-amber-700',
       cardCls: 'bg-amber-50/80 border-amber-200/80',
       iconWrap: 'bg-amber-100/90',
@@ -250,7 +314,7 @@ export function OverviewSection({
     {
       label: 'Onboardings',
       value: onboardCount,
-      sub: isSupport ? 'Pricing masked' : `${onboardCreatedCount} live accounts`,
+      sub: `${onboardCreatedCount} live accounts`,
       subColor: 'text-indigo-600',
       cardCls: 'bg-indigo-50/75 border-indigo-200/80',
       iconWrap: 'bg-indigo-100/90',
@@ -262,8 +326,6 @@ export function OverviewSection({
       value: isBilling ? billingQueueCount : rechargeCount,
       sub: isBilling
         ? 'Ready for Tax Invoice'
-        : isSupport
-        ? `${supportRechargeQueue} ready to credit`
         : `${pendingRechargeCount} Pending Approval`,
       subColor: 'text-amber-600',
       cardCls: 'bg-cyan-50/80 border-cyan-200/80',
@@ -1096,17 +1158,11 @@ export function OverviewSection({
       <div
         className={
           isSupport
-            ? 'grid grid-cols-2 md:grid-cols-4 gap-3.5'
+            ? 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5'
             : 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5'
         }
       >
-        {kpiCards
-          .filter(
-            (c) =>
-              !isSupport ||
-              (c.label !== 'Active Accounts' && c.label !== 'Pending Recharges')
-          )
-          .map((card) => (
+        {kpiCards.map((card) => (
           <button
             key={card.label}
             onClick={() => onNavigate(card.tab)}
