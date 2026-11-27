@@ -223,6 +223,23 @@ export function LeadsSection({
     ultraviewerId?: string;
     ultraviewerPassword?: string;
   } | null>(null);
+
+  // Upload Lead Confirmation Screen State
+  const [uploadSuccessData, setUploadSuccessData] = useState<{
+    count: number;
+    companyName?: string;
+    clientName?: string;
+    phone?: string;
+    cityLocation?: string;
+    mode: 'CSV' | 'MANUAL';
+    fileName?: string;
+  } | null>(null);
+
+  // Distribution Confirmation Screen State
+  const [distSuccessData, setDistSuccessData] = useState<{
+    totalDistributed: number;
+    allocationsSummary: string;
+  } | null>(null);
   const [meetScheduledDate, setMeetScheduledDate] = useState(
     new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
   );
@@ -393,20 +410,16 @@ export function LeadsSection({
           : 'Single Lead Form',
     });
     if (ok) {
-      setUploadOpen(false);
-      onClearInitialUpload?.();
-      setUploadedFileName('');
-      setManualLead({
-        leadDate: TODAY_DATE,
-        companyName: '',
-        designation: '',
-        clientName: '',
-        phone: '',
-        email: '',
-        linkedinUrl: '',
-        cityLocation: '',
-        feedbackRemark: '',
+      setUploadSuccessData({
+        count: leadsPayload.length,
+        companyName: manualLead.companyName,
+        clientName: manualLead.clientName,
+        phone: manualLead.phone,
+        cityLocation: manualLead.cityLocation,
+        mode: uploadMode,
+        fileName: uploadedFileName,
       });
+      onClearInitialUpload?.();
     }
   };
 
@@ -424,13 +437,20 @@ export function LeadsSection({
       agentId: a.id,
       value: Number(allocations[a.id]) || 0,
     }));
+    const totalToDistribute = selectedLeadIds.length > 0 ? selectedLeadIds.length : unassignedLeads.length;
     const ok = await onAction('DISTRIBUTE_LEADS', {
       mode: distMode,
       leadIds: selectedLeadIds.length > 0 ? selectedLeadIds : undefined,
       allocations: payloadAllocations,
     });
     if (ok) {
-      setDistOpen(false);
+      setDistSuccessData({
+        totalDistributed: totalToDistribute,
+        allocationsSummary: agents
+          .filter((a) => Number(allocations[a.id]) > 0)
+          .map((a) => `${a.name}: ${allocations[a.id]}${distMode === 'PERCENTAGE' ? '%' : ' leads'}`)
+          .join(', '),
+      });
       setSelectedLeadIds([]);
     }
   };
@@ -1352,19 +1372,154 @@ ${dynamicSignature}`;
         open={uploadOpen}
         onClose={() => {
           setUploadOpen(false);
+          setUploadSuccessData(null);
           onClearInitialUpload?.();
         }}
         title={
-          role === 'AGENT'
+          uploadSuccessData
+            ? 'Action Successful'
+            : role === 'AGENT'
             ? 'Upload Leads to My Pipeline'
             : 'Upload New Leads'
         }
         subtitle={
-          role === 'AGENT'
+          uploadSuccessData
+            ? 'Confirmation: Your lead entry has been verified and registered in the CRM.'
+            : role === 'AGENT'
             ? 'Upload a .CSV lead file or add a single client lead — automatically added to your My Assigned Leads list.'
             : 'Add leads individually or bulk import via CSV, then distribute by Count or Percentage.'
         }
       >
+        {uploadSuccessData ? (
+          <div className="py-4 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm ring-8 ring-emerald-50">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/90 text-emerald-800 text-xs font-black tracking-wide uppercase">
+                ✅ Kaam Ho Gaya (Confirmation)
+              </span>
+              <h3 className="text-lg font-black text-slate-900 mt-2">
+                {uploadSuccessData.mode === 'MANUAL'
+                  ? 'Lead Successfully Added to CRM!'
+                  : `${uploadSuccessData.count} Leads Imported Successfully!`}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {uploadSuccessData.mode === 'MANUAL'
+                  ? 'Yeh lead CRM database me successfully save ho chuki hai aur aapki list me ready hai.'
+                  : 'Saari CSV leads CRM database me successfully upload ho chuki hain.'}
+              </p>
+            </div>
+
+            {/* Registered Lead Summary Box */}
+            <div className="bg-slate-50 rounded-2xl border border-slate-200/90 p-4 text-left space-y-2.5 text-xs">
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                <span>Confirmation Summary</span>
+                <span className="font-mono text-emerald-700 font-extrabold">STATUS: SUCCESS</span>
+              </div>
+              {uploadSuccessData.mode === 'MANUAL' ? (
+                <>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-semibold">Company Name</span>
+                    <span className="font-extrabold text-slate-900">{uploadSuccessData.companyName || '—'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-semibold">Contact Person</span>
+                    <span className="font-bold text-slate-800">{uploadSuccessData.clientName}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-semibold">Contact Number</span>
+                    <span className="font-mono font-bold text-indigo-700">{uploadSuccessData.phone || '—'}</span>
+                  </div>
+                  {uploadSuccessData.cityLocation && (
+                    <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                      <span className="text-slate-500 font-semibold">Location / City</span>
+                      <span className="font-medium text-slate-700">{uploadSuccessData.cityLocation}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-slate-500 font-semibold">Current Pipeline Status</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[11px]">
+                      NEW (Ready for Calling)
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-semibold">Total Imported</span>
+                    <span className="font-black text-emerald-700 text-sm">{uploadSuccessData.count} Leads</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-semibold">Source File</span>
+                    <span className="font-mono text-slate-700">{uploadSuccessData.fileName || 'CSV File'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-slate-500 font-semibold">Queue Placement</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-extrabold text-[11px]">
+                      Ready for Distribution / Call
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Quick Action Navigation */}
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setUploadSuccessData(null);
+                  setUploadOpen(false);
+                  onClearInitialUpload?.();
+                  setUploadedFileName('');
+                  setCsvText('');
+                  setManualLead({
+                    leadDate: TODAY_DATE,
+                    companyName: '',
+                    designation: '',
+                    clientName: '',
+                    phone: '',
+                    email: '',
+                    linkedinUrl: '',
+                    cityLocation: '',
+                    feedbackRemark: '',
+                  });
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Theek Hai, Dekhein List Me →
+              </button>
+
+              {uploadSuccessData.mode === 'MANUAL' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadSuccessData(null);
+                    setManualLead({
+                      leadDate: TODAY_DATE,
+                      companyName: '',
+                      designation: '',
+                      clientName: '',
+                      phone: '',
+                      email: '',
+                      linkedinUrl: '',
+                      cityLocation: '',
+                      feedbackRemark: '',
+                    });
+                  }}
+                  className="py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-xs text-slate-700 transition flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  <Plus className="w-4 h-4" />
+                  + Aur Lead Add Karein
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+        <>
         <div className="flex gap-2 mb-4">
           <button
             type="button"
@@ -1618,17 +1773,68 @@ ${dynamicSignature}`;
             </button>
           </div>
         </form>
+        </>
+        )}
       </Modal>
 
       {/* Distribute Leads Modal */}
       <Modal
         open={distOpen}
-        onClose={() => setDistOpen(false)}
-        title="Distribute Leads to Agents"
-        subtitle={`Pool size: ${poolForDistribution.length} ${
-          selectedLeadIds.length > 0 ? 'selected' : 'unassigned'
-        } lead(s).`}
+        onClose={() => {
+          setDistOpen(false);
+          setDistSuccessData(null);
+        }}
+        title={distSuccessData ? 'Distribution Complete' : 'Distribute Leads to Agents'}
+        subtitle={
+          distSuccessData
+            ? 'Confirmation: Leads have been partitioned and allotted.'
+            : `Pool size: ${poolForDistribution.length} ${
+                selectedLeadIds.length > 0 ? 'selected' : 'unassigned'
+              } lead(s).`
+        }
       >
+        {distSuccessData ? (
+          <div className="py-4 text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm ring-8 ring-emerald-50">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/90 text-emerald-800 text-xs font-black tracking-wide uppercase">
+                ✅ Kaam Ho Gaya (Confirmation)
+              </span>
+              <h3 className="text-lg font-black text-slate-900 mt-2">
+                Leads Successfully Distributed!
+              </h3>
+              <p className="text-xs text-slate-500">
+                Aapki chuni hui leads team members ke beech allocate ho chuki hain.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 text-left space-y-2 text-xs">
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Total Leads Distributed</span>
+                <span className="font-black text-indigo-700 text-sm">{distSuccessData.totalDistributed} Leads</span>
+              </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-slate-500 font-semibold">Allocation Summary</span>
+                <span className="font-semibold text-slate-800 text-right">{distSuccessData.allocationsSummary}</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDistSuccessData(null);
+                setDistOpen(false);
+              }}
+              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-95"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Theek Hai, Done →
+            </button>
+          </div>
+        ) : (
         <form onSubmit={handleDistributeSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -1765,6 +1971,7 @@ ${dynamicSignature}`;
             </button>
           </div>
         </form>
+        )}
       </Modal>
 
       {/* Update Call / Email & Status Modal */}

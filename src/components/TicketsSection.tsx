@@ -67,6 +67,16 @@ export function TicketsSection({
   const [screenshotDataUrl, setScreenshotDataUrl] = useState('');
   const [screenshotName, setScreenshotName] = useState('');
 
+  // Ticket Confirmation Screen State
+  const [ticketSuccessData, setTicketSuccessData] = useState<{
+    subject: string;
+    companyName: string;
+    username: string;
+    serviceCategory: string;
+    priority: string;
+    targetRole: Role;
+  } | null>(null);
+
   // Ticket Detail / Thread Modal State
   const [activeThreadTicket, setActiveThreadTicket] = useState<SupportTicket | null>(null);
   const [threadReplyText, setThreadReplyText] = useState('');
@@ -157,7 +167,14 @@ export function TicketsSection({
     });
 
     if (ok) {
-      setCreateModalOpen(false);
+      setTicketSuccessData({
+        subject: subject || `${serviceCategory} regarding @${clientUser}`,
+        companyName: compName,
+        username: clientUser,
+        serviceCategory,
+        priority,
+        targetRole,
+      });
     }
   };
 
@@ -641,10 +658,101 @@ export function TicketsSection({
       {/* Rise Cross-Department Ticket Modal */}
       <Modal
         open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        title="Rise Cross-Department Ticket"
-        subtitle="Route queries between Agent, Billing, Support, and Account Management. All actions are logged under the client account for Admin & AM audit."
+        onClose={() => {
+          setCreateModalOpen(false);
+          setTicketSuccessData(null);
+        }}
+        title={ticketSuccessData ? 'Action Successful' : 'Rise Cross-Department Ticket'}
+        subtitle={
+          ticketSuccessData
+            ? 'Confirmation: Your ticket has been logged and assigned.'
+            : 'Route queries between Agent, Billing, Support, and Account Management. All actions are logged under the client account for Admin & AM audit.'
+        }
       >
+        {ticketSuccessData ? (
+          <div className="py-4 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm ring-8 ring-emerald-50">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/90 text-emerald-800 text-xs font-black tracking-wide uppercase">
+                ✅ Kaam Ho Gaya (Confirmation)
+              </span>
+              <h3 className="text-lg font-black text-slate-900 mt-2">
+                Support Ticket Successfully Raised!
+              </h3>
+              <p className="text-xs text-slate-500">
+                Ticket destination team ko assign ho chuka hai aur ticket desk me log ho gaya hai.
+              </p>
+            </div>
+
+            {/* Summary Box */}
+            <div className="bg-slate-50 rounded-2xl border border-slate-200/90 p-4 text-left space-y-2.5 text-xs">
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                <span>Ticket Details</span>
+                <span className="font-mono text-emerald-700 font-extrabold">STATUS: OPEN</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Subject</span>
+                <span className="font-extrabold text-slate-900">{ticketSuccessData.subject}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Client / Company</span>
+                <span className="font-bold text-slate-800">{ticketSuccessData.companyName} (@{ticketSuccessData.username})</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Service Category</span>
+                <span className="font-medium text-slate-700">{ticketSuccessData.serviceCategory}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Priority</span>
+                <span className="px-2 py-0.5 rounded-md font-black text-[10px] bg-rose-100 text-rose-800">
+                  {ticketSuccessData.priority}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-slate-500 font-semibold">Assigned Team</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold text-[11px]">
+                  {ROLE_META[ticketSuccessData.targetRole]?.label || ticketSuccessData.targetRole}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setTicketSuccessData(null);
+                  setCreateModalOpen(false);
+                  setSubject('');
+                  setDescription('');
+                  setScreenshotDataUrl('');
+                  setScreenshotName('');
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Theek Hai, Ticket Desk Me Dekhein →
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTicketSuccessData(null);
+                  setSubject('');
+                  setDescription('');
+                  setScreenshotDataUrl('');
+                  setScreenshotName('');
+                }}
+                className="py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-xs text-slate-700 transition flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                + Ek Aur Ticket Rise Karein
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleCreateSubmit} className="space-y-4">
           {/* Target Department Selection */}
           <div className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white space-y-2">
@@ -957,6 +1065,7 @@ export function TicketsSection({
             </button>
           </div>
         </form>
+        )}
       </Modal>
 
       {/* Ticket Discussion Thread Modal */}

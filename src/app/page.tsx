@@ -1429,11 +1429,22 @@ export default function CrmAppPage() {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-20 lg:bottom-5 right-4 lg:right-5 z-50 px-4 py-3 rounded-xl shadow-lg text-xs font-semibold text-white flex items-center gap-2 ${
-            toast.type === 'success' ? 'bg-[#0A1B3F]' : 'bg-rose-600'
+          className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold text-white flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-300 border ${
+            toast.type === 'success'
+              ? 'bg-[#0A1B3F] border-emerald-500/50 shadow-emerald-950/20'
+              : 'bg-rose-900 border-rose-500/50 shadow-rose-950/20'
           }`}
         >
-          <span>{toast.message}</span>
+          {toast.type === 'success' ? (
+            <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </div>
+          ) : (
+            <div className="w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0">
+              <X className="w-3.5 h-3.5" />
+            </div>
+          )}
+          <span className="tracking-wide">{toast.message}</span>
         </div>
       )}
     </div>

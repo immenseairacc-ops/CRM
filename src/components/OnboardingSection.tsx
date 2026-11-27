@@ -446,6 +446,15 @@ export function OnboardingSection({
   const [extProofUrl, setExtProofUrl] = useState('');
   const [extProofName, setExtProofName] = useState('');
 
+  // Onboarding Confirmation Screen State
+  const [onboardSuccessData, setOnboardSuccessData] = useState<{
+    companyName: string;
+    username: string;
+    services: string[];
+    totalDealAmount: number;
+    billingType: string;
+  } | null>(null);
+
   const handleOpenExtCampaign = (item: OnboardingRequest) => {
     setExtCampaignClient(item);
     const firstSvc = item.services[0] || 'Bulk SMS (DLT)';
@@ -613,25 +622,14 @@ export function OnboardingSection({
       billingType,
     });
     if (ok) {
-      setOpenForm(false);
+      setOnboardSuccessData({
+        companyName,
+        username,
+        services: selectedServices,
+        totalDealAmount: Number(totalDealAmount) || 0,
+        billingType,
+      });
       onClearPrefill();
-      setCompanyName('');
-      setUsername('');
-      setBillingEntity('');
-      setGstNumber('');
-      setGstPdfName('');
-      setGstPdfDataUrl('');
-      setPanCardName('');
-      setPanCardDataUrl('');
-      setMsmeDocName('');
-      setMsmeDocDataUrl('');
-      setBrandLogoName('');
-      setBrandLogoDataUrl('');
-      setBrandBannerName('');
-      setBrandBannerDataUrl('');
-      setOtherDocName('');
-      setOtherDocDataUrl('');
-      setTaxType('GST');
     }
   };
 
@@ -1330,11 +1328,124 @@ export function OnboardingSection({
         open={openForm}
         onClose={() => {
           setOpenForm(false);
+          setOnboardSuccessData(null);
           onClearPrefill();
         }}
-        title="Submit Client Onboarding"
-        subtitle="Goes to Account Manager & Admin for approval. Support only receives Account Username, Agent Name, Services, and Service Rate."
+        title={onboardSuccessData ? 'Action Successful' : 'Submit Client Onboarding'}
+        subtitle={
+          onboardSuccessData
+            ? 'Confirmation: Client onboarding registration has been submitted.'
+            : 'Goes to Account Manager & Admin for approval. Support only receives Account Username, Agent Name, Services, and Service Rate.'
+        }
       >
+        {onboardSuccessData ? (
+          <div className="py-4 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm ring-8 ring-emerald-50">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/90 text-emerald-800 text-xs font-black tracking-wide uppercase">
+                ✅ Kaam Ho Gaya (Confirmation)
+              </span>
+              <h3 className="text-lg font-black text-slate-900 mt-2">
+                Client Onboarding Successfully Submitted!
+              </h3>
+              <p className="text-xs text-slate-500">
+                Onboarding request AM aur Admin ko approval ke liye forward kar di gayi hai.
+              </p>
+            </div>
+
+            {/* Summary Details */}
+            <div className="bg-slate-50 rounded-2xl border border-slate-200/90 p-4 text-left space-y-2.5 text-xs">
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                <span>Onboarding Details</span>
+                <span className="font-mono text-emerald-700 font-extrabold">STATUS: PENDING APPROVAL</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Company Name</span>
+                <span className="font-extrabold text-slate-900">{onboardSuccessData.companyName}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Panel Username</span>
+                <span className="font-mono font-bold text-indigo-700">@{onboardSuccessData.username}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Services Selected</span>
+                <span className="font-medium text-slate-800">{onboardSuccessData.services.join(', ')}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Deal Amount</span>
+                <span className="font-black text-emerald-700">{formatINR(onboardSuccessData.totalDealAmount)}</span>
+              </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-slate-500 font-semibold">Next Action</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[11px]">
+                  AM / Admin Approval → Support Account Creation
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setOnboardSuccessData(null);
+                  setOpenForm(false);
+                  setCompanyName('');
+                  setUsername('');
+                  setBillingEntity('');
+                  setGstNumber('');
+                  setGstPdfName('');
+                  setGstPdfDataUrl('');
+                  setPanCardName('');
+                  setPanCardDataUrl('');
+                  setMsmeDocName('');
+                  setMsmeDocDataUrl('');
+                  setBrandLogoName('');
+                  setBrandLogoDataUrl('');
+                  setBrandBannerName('');
+                  setBrandBannerDataUrl('');
+                  setOtherDocName('');
+                  setOtherDocDataUrl('');
+                  setTaxType('GST');
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Theek Hai, Onboarding List Me Dekhein →
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOnboardSuccessData(null);
+                  setCompanyName('');
+                  setUsername('');
+                  setBillingEntity('');
+                  setGstNumber('');
+                  setGstPdfName('');
+                  setGstPdfDataUrl('');
+                  setPanCardName('');
+                  setPanCardDataUrl('');
+                  setMsmeDocName('');
+                  setMsmeDocDataUrl('');
+                  setBrandLogoName('');
+                  setBrandLogoDataUrl('');
+                  setBrandBannerName('');
+                  setBrandBannerDataUrl('');
+                  setOtherDocName('');
+                  setOtherDocDataUrl('');
+                  setTaxType('GST');
+                }}
+                className="py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-xs text-slate-700 transition flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                + Naya Client Onboard Karein
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Company & Panel Username */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1893,6 +2004,7 @@ export function OnboardingSection({
             </button>
           </div>
         </form>
+        )}
       </Modal>
 
       {/* Support Create & Dispatch Portal Account Modal */}

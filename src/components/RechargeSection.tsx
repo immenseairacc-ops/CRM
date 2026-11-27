@@ -401,6 +401,15 @@ export function RechargeSection({
 
   // Create Recharge OR External Campaign Modal State
   const [openModal, setOpenModal] = useState(false);
+  const [rechargeSuccessData, setRechargeSuccessData] = useState<{
+    companyName: string;
+    username: string;
+    service: string;
+    creditCount: number;
+    amount: number;
+    paymentMode: string;
+    isExternalCampaign?: boolean;
+  } | null>(null);
   const [isExternalCampaignMode, setIsExternalCampaignMode] = useState(false);
   const [campaignTitle, setCampaignTitle] = useState('');
   const [onboardingId, setOnboardingId] = useState(eligibleAccounts[0]?.id || '');
@@ -525,7 +534,17 @@ export function RechargeSection({
       screenshotName: fileName,
       agentNotes,
     });
-    if (ok) setOpenModal(false);
+    if (ok) {
+      setRechargeSuccessData({
+        companyName: selectedAcc.companyName,
+        username: selectedAcc.username,
+        service: service || selectedAcc.services[0] || 'Bulk SMS (DLT)',
+        creditCount: Number(creditCount) || 100000,
+        amount: paymentMode === 'DEMO' ? 0 : Number(amount) || 0,
+        paymentMode,
+        isExternalCampaign: isExternalCampaignMode,
+      });
+    }
   };
 
   const handleTallySubmit = async (e: React.FormEvent) => {
@@ -1436,19 +1455,117 @@ export function RechargeSection({
       {/* ==================================================================================== */}
       <Modal
         open={openModal}
-        onClose={() => setOpenModal(false)}
+        onClose={() => {
+          setOpenModal(false);
+          setRechargeSuccessData(null);
+        }}
         title={
-          isExternalCampaignMode
+          rechargeSuccessData
+            ? 'Action Successful'
+            : isExternalCampaignMode
             ? `🚀 Run External Campaign (Direct → Support): @${selectedClientObj?.username || ''}`
             : `Add Recharge: @${selectedClientObj?.username || ''}`
         }
         subtitle={
-          isExternalCampaignMode
+          rechargeSuccessData
+            ? 'Confirmation: Recharge entry has been registered and forwarded to queue.'
+            : isExternalCampaignMode
             ? 'Attach client supporting screenshot & submit. Request goes DIRECTLY to Support (AM & Admin in loop) -> Support makes Campaign LIVE -> Billing gets regular reminder to raise bill.'
             : 'Client Name, Billing Entity, GSTIN, Panel Username & Service Rate are already saved from Onboarding.'
         }
       >
-        {selectedClientObj && (
+        {rechargeSuccessData ? (
+          <div className="py-4 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm ring-8 ring-emerald-50">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100/90 text-emerald-800 text-xs font-black tracking-wide uppercase">
+                ✅ Kaam Ho Gaya (Confirmation)
+              </span>
+              <h3 className="text-lg font-black text-slate-900 mt-2">
+                {rechargeSuccessData.isExternalCampaign
+                  ? 'Campaign Dispatched to Support!'
+                  : 'Recharge Request Forwarded Successfully!'}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {rechargeSuccessData.paymentMode === 'DEMO'
+                  ? 'Demo credits request direct Support engineer ko forward ho gaya hai.'
+                  : 'Recharge entry Billing & Support queue me safely register ho gayi hai.'}
+              </p>
+            </div>
+
+            {/* Summary Box */}
+            <div className="bg-slate-50 rounded-2xl border border-slate-200/90 p-4 text-left space-y-2.5 text-xs">
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                <span>Recharge Summary</span>
+                <span className="font-mono text-emerald-700 font-extrabold">STATUS: SUBMITTED</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Client Company</span>
+                <span className="font-extrabold text-slate-900">{rechargeSuccessData.companyName}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Panel Username</span>
+                <span className="font-mono font-bold text-indigo-700">@{rechargeSuccessData.username}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Service Route</span>
+                <span className="font-medium text-slate-800">{rechargeSuccessData.service}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Requested Credits</span>
+                <span className="font-black text-indigo-700">{rechargeSuccessData.creditCount.toLocaleString('en-IN')} units</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200/60">
+                <span className="text-slate-500 font-semibold">Recharge Amount</span>
+                <span className="font-black text-emerald-700">
+                  {rechargeSuccessData.paymentMode === 'DEMO' ? 'FREE DEMO (₹0)' : formatINR(rechargeSuccessData.amount)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-slate-500 font-semibold">Next Stage</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]">
+                  {rechargeSuccessData.paymentMode === 'DEMO'
+                    ? 'Support Credit Top-up'
+                    : 'Billing Tally Verification → Support Crediting'}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setRechargeSuccessData(null);
+                  setOpenModal(false);
+                  setScreenshotDataUrl('');
+                  setScreenshotName('');
+                  setAgentNotes('');
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Theek Hai, Recharge Queue Me Dekhein →
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRechargeSuccessData(null);
+                  setScreenshotDataUrl('');
+                  setScreenshotName('');
+                  setAgentNotes('');
+                }}
+                className="py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-xs text-slate-700 transition flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                + Ek Aur Recharge Karein
+              </button>
+            </div>
+          </div>
+        ) : selectedClientObj ? (
           <form onSubmit={handleCreateSubmit} className="space-y-4">
             {/* Mode Switcher Tabs inside Modal */}
             <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100 border border-slate-200">
@@ -1906,7 +2023,7 @@ export function RechargeSection({
               </button>
             </div>
           </form>
-        )}
+        ) : null}
       </Modal>
 
       {/* ==================================================================================== */}
