@@ -574,7 +574,7 @@ export default function CrmAppPage() {
       id: 'inbox',
       label: 'Mail Inbox',
       icon: Mail,
-      visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
+      visible: false,
     },
     {
       id: 'reminders',

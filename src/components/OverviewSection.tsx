@@ -155,20 +155,6 @@ export function OverviewSection({
   const agents = db.users.filter((u) => u.role === 'AGENT');
 
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
-  const [inboxEmails, setInboxEmails] = useState<
-    Array<{
-      id: string;
-      from: { name: string; address: string };
-      subject: string;
-      snippet: string;
-      date: string;
-      seen: boolean;
-    }>
-  >([]);
-  const [inboxLoading, setInboxLoading] = useState(true);
-  const [mailConnected, setMailConnected] = useState<boolean>(
-    Boolean(currentUser?.mailConfig?.email)
-  );
 
   // Admin filter state for Today's Schedule & Reminders
   const [adminScheduleRoleFilter, setAdminScheduleRoleFilter] = useState<
@@ -184,32 +170,6 @@ export function OverviewSection({
   // Main Dashboard Data Horizon Filter (Defaults to TODAY)
   const [dashboardDateRange, setDashboardDateRange] = useState<DashboardDateRange>('TODAY');
   const [showEodModal, setShowEodModal] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-    const loadInboxPreview = async () => {
-      try {
-        const url = currentUser ? `/api/inbox?userId=${encodeURIComponent(currentUser.id)}` : '/api/inbox';
-        const res = await fetch(url);
-        const data = await res.json();
-        if (isMounted && data.ok && Array.isArray(data.emails)) {
-          const connected = data.mailConnected !== false && data.source !== 'NOT_LOGGED_IN';
-          setMailConnected(connected);
-          setInboxEmails(connected ? data.emails.slice(0, 3) : []);
-        }
-      } catch {
-        // silent fallback
-      } finally {
-        if (isMounted) setInboxLoading(false);
-      }
-    };
-    loadInboxPreview();
-    const timer = setInterval(loadInboxPreview, 20000);
-    return () => {
-      isMounted = false;
-      clearInterval(timer);
-    };
-  }, [currentUser?.id, currentUser?.mailConfig?.email]);
 
   // Filter leads based on selected Dashboard date range
   const filteredLeads = useMemo(() => {
@@ -1479,96 +1439,52 @@ export function OverviewSection({
 
       {/* ROW 2: 3-Column Middle Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Card 1: Mail Inbox (Replaced Lead Pipeline with same size) */}
+        {/* Card 1: Lead Pipeline & Stage Funnel */}
         <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3.5">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <PngIcon src="/icons/communication.png" alt="Mail Inbox" className="w-4 h-4" />
-                Mail Inbox ({currentUser.mailConfig?.email || currentUser.email})
+                <PngIcon src="/icons/pipeline.png" alt="Lead Pipeline" className="w-4 h-4" />
+                Lead Pipeline &amp; Conversion
               </h3>
               <button
-                onClick={() => onNavigate('inbox')}
+                onClick={() => onNavigate('leads')}
                 className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1"
               >
-                Open Inbox →
+                View Leads →
               </button>
             </div>
 
-            {inboxLoading ? (
-              <div className="py-12 text-center text-xs text-slate-400">
-                Loading messages...
-              </div>
-            ) : !mailConnected ? (
-              <div className="py-8 px-4 text-center space-y-3 border border-dashed border-slate-200 rounded-2xl bg-slate-50/60">
-                <div className="text-xs font-bold text-[#0A1B3F]">
-                  Mail Account Not Logged In
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  Apna personal mailbox ({currentUser.email}) dekhne ke liye Mail Login karein.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('inbox')}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#F2591F] hover:bg-[#d94a14] text-white text-xs font-bold shadow-xs"
-                >
-                  Login Mail Account →
-                </button>
-              </div>
-            ) : inboxEmails.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-400">
-                No recent emails in inbox.
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {inboxEmails.slice(0, 3).map((mail) => (
-                  <div
-                    key={mail.id}
-                    onClick={() => onNavigate('inbox')}
-                    className="p-3 rounded-2xl bg-slate-50/70 hover:bg-blue-50/60 border border-slate-200/80 hover:border-blue-300 transition cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
-                  >
-                    <div className="flex items-center justify-between gap-1 text-xs">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {!mail.seen && (
-                          <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                        )}
-                        <span className={`truncate text-slate-900 ${!mail.seen ? 'font-bold' : 'font-semibold'}`}>
-                          {mail.from.name || mail.from.address}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap shrink-0">
-                        {formatTimeOnly(mail.date)}
-                      </span>
+            <div className="space-y-3">
+              {pipelineRows.map((row) => {
+                const pct = Math.round((row.count / maxPipeline) * 100);
+                return (
+                  <div key={row.label} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700">{row.label}</span>
+                      <span className="font-extrabold text-slate-900">{row.count}</span>
                     </div>
-                    <div className="text-xs text-slate-800 font-bold truncate mt-1">
-                      {mail.subject}
+                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${row.bar}`}
+                        style={{ width: `${Math.max(row.count > 0 ? 8 : 0, pct)}%` }}
+                      />
                     </div>
-                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                      {mail.snippet}
-                    </p>
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            {mailConnected ? (
-              <span className="text-slate-500 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                IMAP Connected
-              </span>
-            ) : (
-              <span className="text-amber-700 font-semibold flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                Mail Not Connected
-              </span>
-            )}
+          <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span className="text-slate-500 font-medium">
+              Total Active Leads: <strong className="text-slate-800">{pipelineDataSource.length}</strong>
+            </span>
             <button
-              onClick={() => onNavigate('inbox')}
-              className="text-xs font-bold text-blue-600 hover:underline"
+              onClick={() => onNavigate('leads')}
+              className="text-xs font-bold text-indigo-600 hover:underline"
             >
-              {mailConnected ? 'View All Emails →' : 'Login Mail →'}
+              Open Distribution →
             </button>
           </div>
         </div>
