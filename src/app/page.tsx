@@ -88,6 +88,36 @@ export default function CrmAppPage() {
     return db.users.find((u) => u.id === activeUserId);
   }, [db, activeUserId]);
 
+  const dueRemindersCount = useMemo(() => {
+    if (!db || !currentUser) return 0;
+    const now = Date.now();
+    const leadReminders = (db.leads || []).filter((l) => {
+      if (!l.reminder || l.reminder.completed || !l.reminder.datetime) return false;
+      const dt = new Date(l.reminder.datetime).getTime();
+      return (
+        !isNaN(dt) &&
+        dt <= now &&
+        (currentUser.role !== 'AGENT' || !l.assignedToAgentId || l.assignedToAgentId === currentUser.id)
+      );
+    }).length;
+
+    const paymentReminders = (db.rechargeRequests || []).filter((r) => {
+      if (!r.paymentCallbackReminder || r.paymentCallbackReminder.completed || !r.paymentCallbackReminder.datetime) return false;
+      const dt = new Date(r.paymentCallbackReminder.datetime).getTime();
+      if (isNaN(dt) || dt > now) return false;
+      if (currentUser.role === 'AGENT') {
+        return r.agentId === currentUser.id || (r.agentName || '').toLowerCase() === (currentUser.name || '').toLowerCase();
+      }
+      return (
+        currentUser.role === 'BILLING' ||
+        currentUser.role === 'ADMIN' ||
+        currentUser.role === 'ACCOUNT_MANAGER'
+      );
+    }).length;
+
+    return leadReminders + paymentReminders;
+  }, [db, currentUser]);
+
   const showToast = useCallback(
     (type: 'success' | 'error', message: string) => {
       setToast({ type, message });
@@ -368,36 +398,6 @@ export default function CrmAppPage() {
   const unreadCount = (db.notifications || []).filter(
     (n) => !(n.readBy || []).includes(currentUser.id)
   ).length;
-
-  const dueRemindersCount = useMemo(() => {
-    if (!db || !currentUser) return 0;
-    const now = Date.now();
-    const leadReminders = (db.leads || []).filter((l) => {
-      if (!l.reminder || l.reminder.completed || !l.reminder.datetime) return false;
-      const dt = new Date(l.reminder.datetime).getTime();
-      return (
-        !isNaN(dt) &&
-        dt <= now &&
-        (currentUser.role !== 'AGENT' || !l.assignedToAgentId || l.assignedToAgentId === currentUser.id)
-      );
-    }).length;
-
-    const paymentReminders = (db.rechargeRequests || []).filter((r) => {
-      if (!r.paymentCallbackReminder || r.paymentCallbackReminder.completed || !r.paymentCallbackReminder.datetime) return false;
-      const dt = new Date(r.paymentCallbackReminder.datetime).getTime();
-      if (isNaN(dt) || dt > now) return false;
-      if (currentUser.role === 'AGENT') {
-        return r.agentId === currentUser.id || (r.agentName || '').toLowerCase() === (currentUser.name || '').toLowerCase();
-      }
-      return (
-        currentUser.role === 'BILLING' ||
-        currentUser.role === 'ADMIN' ||
-        currentUser.role === 'ACCOUNT_MANAGER'
-      );
-    }).length;
-
-    return leadReminders + paymentReminders;
-  }, [db, currentUser]);
 
   const allNavItems: Array<{
     id: NavTab;
