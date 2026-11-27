@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ExternalLink } from "lucide-react";
 import { QuotationDocument } from "./QuotationDocument";
 import { PreviewFocusContext } from "./preview-focus";
 import {
@@ -297,6 +298,16 @@ export function QuotationBuilder() {
                 {grandTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
               </p>
             </div>
+            <a
+              href="/quotation"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open full window Quotation Manager"
+              className="rounded-lg border border-brand-line bg-white px-3 py-2 text-xs font-semibold text-navy shadow-xs transition-all hover:bg-slate-50 flex items-center gap-1.5"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-orange-600" />
+              <span className="hidden sm:inline">Full Window</span>
+            </a>
             <button
               type="button"
               onClick={() => window.print()}
