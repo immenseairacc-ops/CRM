@@ -467,6 +467,12 @@ export default function CrmAppPage() {
       visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
     },
     {
+      id: 'quotations',
+      label: 'Quotation App',
+      icon: FileText,
+      visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
+    },
+    {
       id: 'teams',
       label: 'Teams & User Mapping',
       icon: ShieldCheck,
@@ -570,12 +576,6 @@ export default function CrmAppPage() {
             ).length
           : undefined,
       visible: role !== 'SUPPORT',
-    },
-    {
-      id: 'quotations',
-      label: 'Quotation Maker',
-      icon: FileText,
-      visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
     },
   ];
   const navItems = allNavItems.filter((item) => item.visible);
