@@ -27,6 +27,7 @@ import {
   Wallet,
   X,
   Database,
+  Smartphone,
 } from 'lucide-react';
 import { BackupLogsModal } from '@/components/BackupLogsModal';
 import { CrmDatabase, Lead, RechargeRequest, User } from '@/types/crm';
@@ -72,6 +73,48 @@ export default function CrmAppPage() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [backupLogsOpen, setBackupLogsOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showIosGuide, setShowIosGuide] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone
+      ) {
+        setIsStandalone(true);
+      }
+      const handler = (e: any) => {
+        e.preventDefault();
+        setInstallPrompt(e);
+      };
+      window.addEventListener('beforeinstallprompt', handler);
+      return () => window.removeEventListener('beforeinstallprompt', handler);
+    }
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        setIsStandalone(true);
+        setInstallPrompt(null);
+        showToast('success', 'Immense Air CRM app installed on home screen!');
+      }
+    } else {
+      const isIos =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIos) {
+        setShowIosGuide(true);
+      } else {
+        alert(
+          'Mobile App Install Karne Ke Liye:\n\n1. Browser ke 3 dots (⋮) par tap karein.\n2. "Install App" ya "Add to Home screen" par tap karein.\n3. App aapke phone par bina browser ke full-screen chalegi!'
+        );
+      }
+    }
+  };
 
   const [prefillOnboardLead, setPrefillOnboardLead] = useState<Lead | null>(
     null
@@ -834,6 +877,17 @@ export default function CrmAppPage() {
               <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} />
             </button>
 
+            {!isStandalone && (
+              <button
+                onClick={handleInstallApp}
+                title="Install Mobile App on Phone"
+                className="px-2.5 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden sm:inline">Install App</span>
+              </button>
+            )}
+
             {currentUser?.role === 'ADMIN' && (
               <button
                 onClick={() => setBackupLogsOpen(true)}
@@ -1148,6 +1202,46 @@ export default function CrmAppPage() {
           onAction={handleAction}
           showToast={showToast}
         />
+      )}
+
+      {/* iOS App Install Instructions Modal */}
+      {showIosGuide && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl relative text-left">
+            <button
+              onClick={() => setShowIosGuide(false)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <h3 className="text-base font-black text-slate-900">
+              Install on iPhone (iOS)
+            </h3>
+            <p className="text-xs text-slate-600 mt-1">
+              Apne iPhone par CRM app install karne ke liye 2 aasan steps:
+            </p>
+            <ol className="mt-3 space-y-2 text-xs text-slate-700 font-medium">
+              <li className="flex items-start gap-2">
+                <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-800 font-bold flex items-center justify-center shrink-0">1</span>
+                <span>Safari browser ke bottom bar mein <strong>Share</strong> icon (⎋) par tap karein.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-800 font-bold flex items-center justify-center shrink-0">2</span>
+                <span>Menu ko scroll karke <strong>&apos;Add to Home Screen&apos; (+)</strong> select karein.</span>
+              </li>
+            </ol>
+            <button
+              type="button"
+              onClick={() => setShowIosGuide(false)}
+              className="w-full mt-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold"
+            >
+              Got It
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Toast Notification */}

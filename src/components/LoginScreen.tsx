@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, RefreshCw, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Download, Eye, EyeOff, Lock, Mail, RefreshCw, ShieldCheck, Smartphone, X } from 'lucide-react';
 import { CrmDatabase, User } from '@/types/crm';
 
 function generateCaptchaCode(): string {
@@ -25,10 +25,48 @@ export function LoginScreen({
   const [error, setError] = useState('');
   const [captchaCode, setCaptchaCode] = useState('');
   const [captchaInput, setCaptchaInput] = useState('');
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [showIosGuide, setShowIosGuide] = useState(false);
 
   useEffect(() => {
     setCaptchaCode(generateCaptchaCode());
+
+    if (typeof window !== 'undefined') {
+      if (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone
+      ) {
+        setIsInstalled(true);
+      }
+      const handler = (e: any) => {
+        e.preventDefault();
+        setInstallPrompt(e);
+      };
+      window.addEventListener('beforeinstallprompt', handler);
+      return () => window.removeEventListener('beforeinstallprompt', handler);
+    }
   }, []);
+
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        setIsInstalled(true);
+      }
+    } else {
+      const isIos =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIos) {
+        setShowIosGuide(true);
+      } else {
+        alert(
+          'Mobile App Install Karne Ke Liye:\n\n1. Mobile Chrome browser ke top right 3 dots (⋮) par tap karein.\n2. "Install App" ya "Add to Home screen" par tap karein.\n3. App aapke mobile screen par install ho jayegi!'
+        );
+      }
+    }
+  };
 
   const refreshCaptcha = () => {
     setCaptchaCode(generateCaptchaCode());
@@ -229,7 +267,59 @@ export function LoginScreen({
           >
             {loading ? 'Signing In...' : 'Sign In to Workspace'}
           </button>
+
+          {!isInstalled && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleInstallClick}
+                className="w-full py-2.5 px-3 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center justify-center gap-2 transition shadow-xs"
+              >
+                <Smartphone className="w-4 h-4 text-emerald-600" />
+                <span>📲 Install Mobile App on Phone</span>
+              </button>
+            </div>
+          )}
         </form>
+
+        {showIosGuide && (
+          <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl relative text-left">
+              <button
+                onClick={() => setShowIosGuide(false)}
+                className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
+                <Smartphone className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-black text-slate-900">
+                Install on iPhone (iOS)
+              </h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Apne iPhone par CRM app install karne ke liye 2 aasan steps:
+              </p>
+              <ol className="mt-3 space-y-2 text-xs text-slate-700 font-medium">
+                <li className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-800 font-bold flex items-center justify-center shrink-0">1</span>
+                  <span>Safari browser ke bottom bar mein <strong>Share</strong> button (⎋) par tap karein.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-800 font-bold flex items-center justify-center shrink-0">2</span>
+                  <span>Scroll karke <strong>&apos;Add to Home Screen&apos; (+)</strong> par tap karein.</span>
+                </li>
+              </ol>
+              <button
+                type="button"
+                onClick={() => setShowIosGuide(false)}
+                className="w-full mt-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
