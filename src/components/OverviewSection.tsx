@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowUpRight, Check, CheckCircle2, Clock, Headphones, Mail, MailOpen, Plus } from 'lucide-react';
+import { ArrowUpRight, Check, CheckCircle2, Clock, Headphones, Mail, MailOpen, Plus, TrendingUp } from 'lucide-react';
 import errorsData from '@/data/errors.json';
 import { CrmDatabase, Role, User } from '@/types/crm';
 import { formatINR, getPaymentBreakdown, ROLE_META, StatusBadge } from './ui';
 import { AgentAnalyticsSection } from './AgentAnalyticsSection';
 import { AdminLatencyRadarSection } from './AdminLatencyRadarSection';
+import { EodReportModal } from './EodReportModal';
 
 export type NavTab =
   | 'overview'
@@ -181,6 +182,7 @@ export function OverviewSection({
 
   // Main Dashboard Data Horizon Filter (Defaults to TODAY)
   const [dashboardDateRange, setDashboardDateRange] = useState<DashboardDateRange>('TODAY');
+  const [showEodModal, setShowEodModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -1343,9 +1345,21 @@ export function OverviewSection({
           </h1>
           <p className="text-xs text-slate-500">{ROLE_META[role].desc}</p>
         </div>
-        <span className="text-[11px] font-medium text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full self-start sm:self-auto">
-          Live Workspace • Auto-syncing every 5s
-        </span>
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {(role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'BILLING') && (
+            <button
+              onClick={() => setShowEodModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-bold shadow-sm transition"
+              title="Open End of Day (EOD) Operations & Accounts Report"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+              EOD Daily Report
+            </button>
+          )}
+          <span className="text-[11px] font-medium text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full">
+            Live Workspace • Auto-syncing every 5s
+          </span>
+        </div>
       </div>
 
       {/* Date Horizon Filter Strip (Defaults to TODAY) */}
@@ -2223,6 +2237,15 @@ export function OverviewSection({
             </table>
           </div>
         </div>
+      )}
+
+      {/* End of Day (EOD) Operations & Accounts Report Modal */}
+      {showEodModal && (
+        <EodReportModal
+          db={db}
+          currentUser={currentUser}
+          onClose={() => setShowEodModal(false)}
+        />
       )}
     </div>
   );

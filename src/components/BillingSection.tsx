@@ -25,12 +25,15 @@ import {
   Search,
   Send,
   ShieldCheck,
+  TrendingUp,
   Upload,
   UploadCloud,
   UserCheck,
   Wallet,
 } from 'lucide-react';
 import { CrmDatabase, PaymentStatus, RechargeRequest, User } from '@/types/crm';
+import { EodReportModal } from './EodReportModal';
+import { PaymentReceiptModal } from './PaymentReceiptModal';
 import {
   fileToDataUrl,
   formatDateTime,
@@ -131,6 +134,8 @@ export function BillingSection({
   const [viewSupportProofReq, setViewSupportProofReq] = useState<RechargeRequest | null>(
     null
   );
+  const [showEodModal, setShowEodModal] = useState(false);
+  const [receiptRecharge, setReceiptRecharge] = useState<RechargeRequest | null>(null);
 
   // Helper to compute exact paid & balance due for any billed item
   const getPaymentBreakdown = (item: RechargeRequest) => {
@@ -319,6 +324,131 @@ export function BillingSection({
     (r) => new Date(r.paymentCallbackReminder!.datetime).getTime() <= Date.now()
   ).length;
 
+  const exportBilledLedgerCSV = () => {
+    const headers = [
+      'Invoice No',
+      'Invoice Date',
+      'Company Name',
+      'Billing Entity',
+      'Client Name',
+      'Client Phone',
+      'Account Username',
+      'Service',
+      'Credit Count',
+      'Commercial Route',
+      'Total Amount (INR)',
+      'Paid Amount (INR)',
+      'Balance Due (INR)',
+      'Payment Status',
+      'Payment Mode',
+      'Payment Remarks',
+    ];
+
+    const rows = billedHistory.map((item) => {
+      const br = getPaymentBreakdown(item);
+      return [
+        item.billingInvoiceNumber || item.id || '',
+        (item.billingCompletedAt || item.updatedAt || item.createdAt || '').slice(0, 10),
+        item.companyName || '',
+        item.billingEntity || item.companyName || '',
+        item.clientName || '',
+        item.clientPhone || '',
+        item.username || '',
+        item.service || '',
+        String(item.creditCount || ''),
+        item.rechargeBasis === 'ON_SUBMISSION' ? 'On Submission' : 'On Delivery',
+        String(br.total || 0),
+        String(br.paid || 0),
+        String(br.balance || 0),
+        br.status || (br.balance > 0 ? 'PENDING' : 'PAID'),
+        item.paymentMode || 'PREPAID',
+        item.billingPaymentNote || '',
+      ];
+    });
+
+    const escapeCsv = (val: string | number | undefined | null) => {
+      if (val === undefined || val === null) return '""';
+      const s = String(val).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const csv = [
+      headers.map(escapeCsv).join(','),
+      ...rows.map((r) => r.map(escapeCsv).join(',')),
+    ].join('\r\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `immense_billed_ledger_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportOutstandingCSV = () => {
+    const headers = [
+      'Invoice No',
+      'Company Name',
+      'Billing Entity',
+      'Client Contact',
+      'Client Phone',
+      'Account Username',
+      'Service',
+      'Total Bill (INR)',
+      'Paid Amount (INR)',
+      'Balance Due (INR)',
+      'Follow-Up Count',
+      'Next Callback Date',
+      'Last Follow-Up Remark',
+    ];
+
+    const rows = billedHistory
+      .filter((item) => getPaymentBreakdown(item).balance > 0)
+      .map((item) => {
+        const br = getPaymentBreakdown(item);
+        const cb = item.paymentCallbackReminder;
+        return [
+          item.billingInvoiceNumber || item.id || '',
+          item.companyName || '',
+          item.billingEntity || item.companyName || '',
+          item.clientName || '',
+          item.clientPhone || '',
+          item.username || '',
+          item.service || '',
+          String(br.total || 0),
+          String(br.paid || 0),
+          String(br.balance || 0),
+          String(item.billingFollowUpCount || 0),
+          cb?.datetime ? cb.datetime.slice(0, 16).replace('T', ' ') : 'Not Scheduled',
+          cb?.note || item.billingPaymentNote || '',
+        ];
+      });
+
+    const escapeCsv = (val: string | number | undefined | null) => {
+      if (val === undefined || val === null) return '""';
+      const s = String(val).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const csv = [
+      headers.map(escapeCsv).join(','),
+      ...rows.map((r) => r.map(escapeCsv).join(',')),
+    ].join('\r\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `immense_outstanding_followups_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-5">
       {/* Clean Header + Organized Sub-Tab Navigation */}
@@ -335,34 +465,30 @@ export function BillingSection({
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
             <button
               type="button"
-              onClick={() => {
-                const headers = ['Company', 'Client', 'Invoice No', 'Total Amount', 'Paid', 'Balance', 'Status', 'Date'];
-                const rows = billedHistory.map((item) => {
-                  const br = getPaymentBreakdown(item);
-                  return [
-                    item.companyName || '',
-                    item.clientName || '',
-                    item.billingInvoiceNumber || item.id || '',
-                    String(br.total || 0),
-                    String(br.paid || 0),
-                    String(br.balance || 0),
-                    br.balance > 0 ? 'PENDING' : 'PAID',
-                    (item.createdAt || '').slice(0, 10),
-                  ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',');
-                });
-                const csv = [headers.join(','), ...rows].join('\n');
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `immense-billing-export-${new Date().toISOString().slice(0, 10)}.csv`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition"
+              onClick={() => setShowEodModal(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+              title="End of Day Operations & Financial Summary"
             >
-              <Download className="w-3.5 h-3.5" />
-              Export CSV (GST/CA)
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+              EOD Daily Report
+            </button>
+            <button
+              type="button"
+              onClick={exportBilledLedgerCSV}
+              className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition"
+              title="Download full billed ledger for Tally / CA"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-700" />
+              Export Ledger (CSV)
+            </button>
+            <button
+              type="button"
+              onClick={exportOutstandingCSV}
+              className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold flex items-center gap-1.5 transition"
+              title="Download pending payments & callback list"
+            >
+              <Download className="w-3.5 h-3.5 text-rose-700" />
+              Export Outstanding (CSV)
             </button>
             {dueCallbacksCount > 0 && (
               <button
@@ -720,6 +846,15 @@ export function BillingSection({
                                   Update Payment / Set Call Date
                                 </button>
                               )}
+                              <button
+                                type="button"
+                                onClick={() => setReceiptRecharge(item)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold inline-flex items-center gap-1 shadow-2xs transition"
+                                title="Official Money Receipt Voucher"
+                              >
+                                <Receipt className="w-3 h-3 text-emerald-700" />
+                                Receipt Voucher
+                              </button>
                               {item.billingTaxInvoiceDataUrl && (
                                 <button
                                   type="button"
@@ -1477,6 +1612,15 @@ export function BillingSection({
                               Update Payment / Balance
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => setReceiptRecharge(item)}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold inline-flex items-center gap-1 shadow-2xs transition"
+                            title="Official Money Receipt Voucher"
+                          >
+                            <Receipt className="w-3.5 h-3.5 text-emerald-700" />
+                            Receipt Voucher
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -2022,6 +2166,23 @@ export function BillingSection({
           </div>
         )}
       </Modal>
+
+      {/* Official Payment Receipt Voucher Modal */}
+      {receiptRecharge && (
+        <PaymentReceiptModal
+          recharge={receiptRecharge}
+          onClose={() => setReceiptRecharge(null)}
+        />
+      )}
+
+      {/* End of Day (EOD) Operations & Accounts Report Modal */}
+      {showEodModal && (
+        <EodReportModal
+          db={db}
+          currentUser={currentUser}
+          onClose={() => setShowEodModal(false)}
+        />
+      )}
     </div>
   );
 }

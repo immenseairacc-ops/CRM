@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      buildVersion: '2026-11-27-v5',
+      buildVersion: '2026-11-27-v6',
       data: sanitized,
     });
   } catch (error) {
