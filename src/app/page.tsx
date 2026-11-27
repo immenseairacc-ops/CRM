@@ -521,15 +521,12 @@ export default function CrmAppPage() {
     (n) => !(n.readBy || []).includes(currentUser.id)
   ).length;
 
-  const unreadChatCount = useMemo(() => {
-    if (!db || !currentUser || !db.chatMessages) return 0;
-    return db.chatMessages.filter(
-      (m) =>
-        m.senderId !== currentUser.id &&
-        !m.readBy.includes(currentUser.id) &&
-        (!m.channelId ? m.receiverId === currentUser.id : true)
-    ).length;
-  }, [db, currentUser]);
+  const unreadChatCount = (db.chatMessages || []).filter(
+    (m) =>
+      m.senderId !== currentUser.id &&
+      !(m.readBy || []).includes(currentUser.id) &&
+      (!m.channelId ? m.receiverId === currentUser.id : true)
+  ).length;
 
   const allNavItems: Array<{
     id: NavTab;
