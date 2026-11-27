@@ -567,11 +567,11 @@ export function RechargeSection({
 
   const filteredClients = eligibleAccounts.filter((acc) => {
     if (!clientSearch) return true;
-    const q = clientSearch.toLowerCase();
+    const q = clientSearch.toLowerCase().trim();
     return (
-      acc.username.toLowerCase().includes(q) ||
-      acc.companyName.toLowerCase().includes(q) ||
-      acc.agentName.toLowerCase().includes(q) ||
+      (acc.username || '').toLowerCase().includes(q) ||
+      (acc.companyName || '').toLowerCase().includes(q) ||
+      (acc.agentName || '').toLowerCase().includes(q) ||
       (acc.billingEntity || '').toLowerCase().includes(q)
     );
   });

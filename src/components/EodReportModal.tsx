@@ -106,26 +106,26 @@ export function EodReportModal({
     (r) => r.status === 'BILLED' || Boolean(r.billingInvoiceNumber)
   );
 
-  const totalInvoicedAmount = billedRechargesToday.reduce((sum, r) => sum + r.amount, 0);
+  const totalInvoicedAmount = billedRechargesToday.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
   // Payment collected today
   const paymentsCollectedToday = billedRechargesToday.reduce((sum, r) => {
     const pb = getPaymentBreakdown(r);
-    return sum + (pb.paid || 0);
+    return sum + (Number(pb.paid) || 0);
   }, 0);
 
   // Outstanding on today's bills
   const totalOutstandingToday = billedRechargesToday.reduce((sum, r) => {
     const pb = getPaymentBreakdown(r);
-    return sum + (pb.balance || 0);
+    return sum + (Number(pb.balance) || 0);
   }, 0);
 
   // Route breakdown
   const onDeliveryRecharges = billedRechargesToday.filter((r) => r.rechargeBasis !== 'ON_SUBMISSION');
-  const onDeliveryAmount = onDeliveryRecharges.reduce((s, r) => s + r.amount, 0);
+  const onDeliveryAmount = onDeliveryRecharges.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
   const onSubmissionRecharges = billedRechargesToday.filter((r) => r.rechargeBasis === 'ON_SUBMISSION');
-  const onSubmissionAmount = onSubmissionRecharges.reduce((s, r) => s + r.amount, 0);
+  const onSubmissionAmount = onSubmissionRecharges.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
   // Tickets resolved/active
   const ticketsToday = allTickets.filter(
@@ -164,10 +164,10 @@ export function EodReportModal({
       ).length;
 
       const agentBilledRecs = billedRechargesToday.filter((r) => r.agentId === agent.id);
-      const billedRev = agentBilledRecs.reduce((s, r) => s + r.amount, 0);
+      const billedRev = agentBilledRecs.reduce((s, r) => s + (Number(r.amount) || 0), 0);
       const collected = agentBilledRecs.reduce((s, r) => {
         const pb = getPaymentBreakdown(r);
-        return s + (pb.paid || 0);
+        return s + (Number(pb.paid) || 0);
       }, 0);
 
       return {
@@ -184,12 +184,20 @@ export function EodReportModal({
 
   // Copy WhatsApp Formatted Report
   const handleCopyWhatsApp = () => {
-    const formattedDate = new Date(`${selectedDate}T00:00:00`).toLocaleDateString('en-IN', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    let formattedDate = selectedDate;
+    try {
+      const d = new Date(`${selectedDate}T00:00:00`);
+      if (!isNaN(d.getTime())) {
+        formattedDate = d.toLocaleDateString('en-IN', {
+          weekday: 'long',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        });
+      }
+    } catch {
+      formattedDate = selectedDate;
+    }
 
     const agentRows = agentPerformance
       .map(

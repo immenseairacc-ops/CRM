@@ -82,16 +82,29 @@ export function PaymentReceiptModal({
 }) {
   const [copied, setCopied] = useState(false);
   const pb = getPaymentBreakdown(recharge);
-  const receiptNo = `IA/RCP/${(recharge.billingCompletedAt || recharge.updatedAt || recharge.createdAt)
-    .slice(0, 10)
-    .replace(/-/g, '')}/${recharge.id.slice(-4).toUpperCase()}`;
-  const receiptDate = new Date(
-    recharge.paymentUpdatedAt || recharge.billingCompletedAt || recharge.createdAt
-  ).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  const dateRaw =
+    recharge.paymentUpdatedAt ||
+    recharge.billingCompletedAt ||
+    recharge.updatedAt ||
+    recharge.createdAt ||
+    new Date().toISOString();
+  const dateClean = dateRaw.slice(0, 10).replace(/-/g, '');
+  const idSuffix = (recharge.id || '0000').slice(-4).toUpperCase();
+  const receiptNo = `IA/RCP/${dateClean}/${idSuffix}`;
+
+  let receiptDate = dateRaw.slice(0, 10);
+  try {
+    const d = new Date(dateRaw);
+    if (!isNaN(d.getTime())) {
+      receiptDate = d.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+  } catch {
+    receiptDate = dateRaw.slice(0, 10);
+  }
 
   const amountReceived = pb.paid > 0 ? pb.paid : pb.total;
   const amountInWords = numberToIndianWords(amountReceived);

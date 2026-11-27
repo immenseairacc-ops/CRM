@@ -294,13 +294,13 @@ export default function CrmAppPage() {
 
     if (isPayReminderRole) {
       const duePayBill = (db.rechargeRequests || []).find((r) => {
-        if (!r.paymentCallbackReminder || r.paymentCallbackReminder.completed) return false;
-        const isTimeDue = new Date(r.paymentCallbackReminder.datetime).getTime() <= nowMs;
-        if (!isTimeDue) return false;
+        if (!r.paymentCallbackReminder || r.paymentCallbackReminder.completed || !r.paymentCallbackReminder.datetime) return false;
+        const dt = new Date(r.paymentCallbackReminder.datetime).getTime();
+        if (isNaN(dt) || dt > nowMs) return false;
         if (alertedIdsRef.current.has(`pay:${r.id}:${r.paymentCallbackReminder.datetime}`)) return false;
         // For Agent role, only alert for the agent's assigned clients
         if (currentUser.role === 'AGENT') {
-          return r.agentId === currentUser.id || r.agentName?.toLowerCase() === currentUser.name?.toLowerCase();
+          return r.agentId === currentUser.id || (r.agentName || '').toLowerCase() === (currentUser.name || '').toLowerCase();
         }
         return true;
       });
@@ -372,20 +372,22 @@ export default function CrmAppPage() {
   const dueRemindersCount = useMemo(() => {
     if (!db || !currentUser) return 0;
     const now = Date.now();
-    const leadReminders = db.leads.filter(
-      (l) =>
-        l.reminder &&
-        !l.reminder.completed &&
-        new Date(l.reminder.datetime).getTime() <= now &&
+    const leadReminders = (db.leads || []).filter((l) => {
+      if (!l.reminder || l.reminder.completed || !l.reminder.datetime) return false;
+      const dt = new Date(l.reminder.datetime).getTime();
+      return (
+        !isNaN(dt) &&
+        dt <= now &&
         (currentUser.role !== 'AGENT' || !l.assignedToAgentId || l.assignedToAgentId === currentUser.id)
-    ).length;
+      );
+    }).length;
 
     const paymentReminders = (db.rechargeRequests || []).filter((r) => {
-      if (!r.paymentCallbackReminder || r.paymentCallbackReminder.completed) return false;
-      const isDue = new Date(r.paymentCallbackReminder.datetime).getTime() <= now;
-      if (!isDue) return false;
+      if (!r.paymentCallbackReminder || r.paymentCallbackReminder.completed || !r.paymentCallbackReminder.datetime) return false;
+      const dt = new Date(r.paymentCallbackReminder.datetime).getTime();
+      if (isNaN(dt) || dt > now) return false;
       if (currentUser.role === 'AGENT') {
-        return r.agentId === currentUser.id || r.agentName?.toLowerCase() === currentUser.name?.toLowerCase();
+        return r.agentId === currentUser.id || (r.agentName || '').toLowerCase() === (currentUser.name || '').toLowerCase();
       }
       return (
         currentUser.role === 'BILLING' ||

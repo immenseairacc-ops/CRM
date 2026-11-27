@@ -13,11 +13,25 @@ export default function GlobalError({
     console.error('Unhandled CRM Client Exception:', error);
   }, [error]);
 
+  const handleReload = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.clear();
+        localStorage.removeItem('crm_active_tab');
+      } catch {
+        // silent
+      }
+      window.location.href = window.location.origin + window.location.pathname + '?reload=' + Date.now();
+    } else {
+      reset();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 text-center">
       <div className="bg-white border border-slate-200 rounded-3xl p-8 max-w-md w-full shadow-lg">
-        <div className="w-14 h-14 bg-rose-50 border border-rose-200 rounded-2xl mx-auto flex items-center justify-center text-rose-600 font-bold text-2xl mb-4">
-          ⚠️
+        <div className="w-14 h-14 bg-emerald-50 border border-emerald-200 rounded-2xl mx-auto flex items-center justify-center text-emerald-600 font-bold text-2xl mb-4">
+          ✨
         </div>
         <h2 className="text-lg font-bold text-slate-900 mb-2">
           CRM Workspace Refresh Required
@@ -27,15 +41,8 @@ export default function GlobalError({
         </p>
         <div className="flex flex-col gap-2.5">
           <button
-            onClick={() => {
-              if (typeof window !== 'undefined') {
-                sessionStorage.clear();
-                window.location.reload();
-              } else {
-                reset();
-              }
-            }}
-            className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+            onClick={handleReload}
+            className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5"
           >
             🔄 Reload Workspace Now
           </button>

@@ -242,7 +242,10 @@ export function OverviewSection({
       : isDateInDashboardRange(l.reminder?.datetime, dashboardDateRange)
   );
   const dueReminders = activeReminders.filter(
-    (l) => l.reminder && new Date(l.reminder.datetime).getTime() <= Date.now()
+    (l) =>
+      l.reminder?.datetime &&
+      !isNaN(new Date(l.reminder.datetime).getTime()) &&
+      new Date(l.reminder.datetime).getTime() <= Date.now()
   );
 
   // Meets in range
@@ -2134,7 +2137,7 @@ export function OverviewSection({
                     .filter(
                       (r) => r.agentId === agent.id && r.status === 'BILLED'
                     )
-                    .reduce((s, r) => s + r.amount, 0);
+                    .reduce((s, r) => s + (Number(r.amount) || 0), 0);
                   const agentRevInRange = db.rechargeRequests
                     .filter(
                       (r) =>
@@ -2144,7 +2147,7 @@ export function OverviewSection({
                           ? true
                           : isDateInDashboardRange(r.updatedAt || r.createdAt, dashboardDateRange))
                     )
-                    .reduce((s, r) => s + r.amount, 0);
+                    .reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
                   const displayAssigned =
                     dashboardDateRange === 'ALL_TIME'

@@ -183,13 +183,13 @@ export function BillingSection({
     const { status } = getPaymentBreakdown(item);
     if (paymentFilter !== 'ALL' && status !== paymentFilter) return false;
     if (billSearch) {
-      const q = billSearch.toLowerCase();
+      const q = billSearch.toLowerCase().trim();
       return (
         (item.billingInvoiceNumber || '').toLowerCase().includes(q) ||
-        item.username.toLowerCase().includes(q) ||
-        item.companyName.toLowerCase().includes(q) ||
+        (item.username || '').toLowerCase().includes(q) ||
+        (item.companyName || '').toLowerCase().includes(q) ||
         (item.billingEntity || '').toLowerCase().includes(q) ||
-        item.agentName.toLowerCase().includes(q)
+        (item.agentName || '').toLowerCase().includes(q)
       );
     }
     return true;
@@ -302,26 +302,26 @@ export function BillingSection({
     .filter((item) => getPaymentBreakdown(item).balance > 0)
     .filter((item) => {
       if (!followUpSearch) return true;
-      const q = followUpSearch.toLowerCase();
+      const q = followUpSearch.toLowerCase().trim();
       return (
         (item.billingInvoiceNumber || '').toLowerCase().includes(q) ||
-        item.username.toLowerCase().includes(q) ||
-        item.companyName.toLowerCase().includes(q) ||
+        (item.username || '').toLowerCase().includes(q) ||
+        (item.companyName || '').toLowerCase().includes(q) ||
         (item.billingEntity || '').toLowerCase().includes(q) ||
         (item.clientPhone || '').toLowerCase().includes(q) ||
         (item.clientEmail || '').toLowerCase().includes(q) ||
-        item.agentName.toLowerCase().includes(q)
+        (item.agentName || '').toLowerCase().includes(q)
       );
     })
     .sort((a, b) => {
-      const aRem = a.paymentCallbackReminder && !a.paymentCallbackReminder.completed ? new Date(a.paymentCallbackReminder.datetime).getTime() : Infinity;
-      const bRem = b.paymentCallbackReminder && !b.paymentCallbackReminder.completed ? new Date(b.paymentCallbackReminder.datetime).getTime() : Infinity;
+      const aRem = a.paymentCallbackReminder && !a.paymentCallbackReminder.completed && a.paymentCallbackReminder.datetime ? new Date(a.paymentCallbackReminder.datetime).getTime() : Infinity;
+      const bRem = b.paymentCallbackReminder && !b.paymentCallbackReminder.completed && b.paymentCallbackReminder.datetime ? new Date(b.paymentCallbackReminder.datetime).getTime() : Infinity;
       if (aRem !== bRem) return aRem - bRem;
       return getPaymentBreakdown(b).balance - getPaymentBreakdown(a).balance;
     });
 
   const dueCallbacksCount = activePaymentCallbacks.filter(
-    (r) => new Date(r.paymentCallbackReminder!.datetime).getTime() <= Date.now()
+    (r) => r.paymentCallbackReminder?.datetime && !isNaN(new Date(r.paymentCallbackReminder.datetime).getTime()) && new Date(r.paymentCallbackReminder.datetime).getTime() <= Date.now()
   ).length;
 
   const exportBilledLedgerCSV = () => {
@@ -963,12 +963,12 @@ export function BillingSection({
                             <span>{item.clientPhone || '+91 98201 44500'}</span>
                           </a>
                           <a
-                            href={`mailto:${item.clientEmail || `accounts@${item.companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`}`}
+                            href={`mailto:${item.clientEmail || `accounts@${(item.companyName || 'client').toLowerCase().replace(/[^a-z0-9]/g, '')}.com`}`}
                             className="text-slate-600 hover:text-indigo-600 flex items-center gap-1.5 truncate max-w-[190px]"
                           >
                             <Mail className="w-3.5 h-3.5 text-sky-600 shrink-0" />
                             <span className="truncate">
-                              {item.clientEmail || `accounts@${item.companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`}
+                              {item.clientEmail || `accounts@${(item.companyName || 'client').toLowerCase().replace(/[^a-z0-9]/g, '')}.com`}
                             </span>
                           </a>
                         </div>

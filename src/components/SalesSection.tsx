@@ -280,13 +280,13 @@ export function SalesSection({
     return Array.from(map.values())
       .filter((c) => {
         if (!search) return true;
-        const q = search.toLowerCase();
+        const q = search.toLowerCase().trim();
         return (
-          c.companyName.toLowerCase().includes(q) ||
-          c.billingEntity.toLowerCase().includes(q) ||
-          c.username.toLowerCase().includes(q) ||
+          (c.companyName || '').toLowerCase().includes(q) ||
+          (c.billingEntity || '').toLowerCase().includes(q) ||
+          (c.username || '').toLowerCase().includes(q) ||
           (c.clientPhone || '').toLowerCase().includes(q) ||
-          c.agentName.toLowerCase().includes(q)
+          (c.agentName || '').toLowerCase().includes(q)
         );
       })
       .sort((a, b) => {
