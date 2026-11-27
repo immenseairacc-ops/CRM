@@ -339,99 +339,232 @@ export function SvgIcon({
   );
 }
 
-// Page Bottom Footer
+// Page Bottom Footer (Updated 2-Tier Dual-Tone Design with 5 Service Icons & Smart Communication Banner)
 export function PageWaveFooter({
   site = 'www.immenseair.in',
-  email = 'info@immenseair.in',
-  phone = '+91 2245 00 3131',
+  slogan = 'Smart Communication. Stronger Results.',
 }: {
   site?: string;
   email?: string;
   phone?: string;
+  slogan?: string;
 }) {
-  const telHref = `tel:${phone.replace(/[^\d+]/g, '')}`;
-  const webHref = `https://${site.replace(/^https?:\/\//, '')}`;
+  const displaySite = site.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  const siteHref = `https://${displaySite}`;
 
   return (
-    <div className="absolute inset-x-0" style={{ bottom: '1.5mm' }} aria-hidden={false}>
-      <svg
-        viewBox="0 0 794 70"
-        className="block w-full"
-        style={{ height: '20mm' }}
-      >
-        <path
-          d="M0 34C160 4 300 60 470 34s230-34 324-14v50H0V34Z"
-          fill={BRAND_ORANGE}
-        />
-        <path
-          d="M0 44C160 14 300 70 470 44s230-34 324-14v40H0V44Z"
-          fill={BRAND_NAVY}
-        />
-      </svg>
+    <div
+      className="absolute inset-x-0 bottom-0 select-none z-10"
+      style={{ height: '24mm' }}
+      aria-hidden={false}
+    >
+      {/* 1. Services Top Strip (Clean white bar with 5 services and dividers) */}
       <div
-        className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-[6mm]"
-        style={{
-          height: '13mm',
-          color: '#fff',
-          fontSize: '3.3mm',
-          fontWeight: 600,
-        }}
+        className="flex items-center justify-between px-[10mm]"
+        style={{ height: '8.5mm', background: '#ffffff', borderTop: '1px solid #e2e8f0' }}
       >
-        <a
-          href={webHref}
-          className="flex items-center gap-[2.2mm]"
-          style={{ color: '#fff', textDecoration: 'none' }}
+        {/* Bulk SMS */}
+        <div className="flex items-center gap-[2.2mm]">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" className="shrink-0">
+            <rect x="2" y="5" width="20" height="14" rx="2.5" stroke="#0066d6" strokeWidth="2.2" />
+            <path
+              d="M2.5 6.5L12 13.5L21.5 6.5"
+              stroke="#0066d6"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="font-semibold text-[#0a192f]" style={{ fontSize: '2.9mm' }}>
+            Bulk SMS
+          </span>
+        </div>
+
+        <div style={{ width: '1px', height: '4.5mm', background: '#cbd5e1' }} />
+
+        {/* Bulk WhatsApp */}
+        <div className="flex items-center gap-[2.2mm]">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" className="shrink-0">
+            <circle cx="12" cy="12" r="10.5" fill="#25D366" />
+            <path
+              d="M17.2 14.2c-.25-.13-1.48-.73-1.7-.81-.23-.09-.4-.13-.57.13-.17.26-.65.81-.8 1-.15.17-.3.2-.55.07-.26-.13-1.1-.4-2.1-1.3-.77-.69-1.3-1.55-1.45-1.81-.15-.26-.02-.4.11-.53.12-.12.26-.3.39-.45.13-.15.17-.26.26-.43.09-.17.04-.33-.02-.46-.07-.13-.57-1.37-.78-1.87-.2-.49-.41-.42-.57-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.87.85-.87 2.08s.89 2.41 1.01 2.58c.13.17 1.75 2.68 4.25 3.75 2.5 1.07 2.5.72 2.95.67.45-.04 1.48-.6 1.69-1.19.21-.59.21-1.1.15-1.21-.06-.1-.23-.17-.49-.3z"
+              fill="#ffffff"
+            />
+          </svg>
+          <span className="font-semibold text-[#0a192f]" style={{ fontSize: '2.9mm' }}>
+            Bulk WhatsApp
+          </span>
+        </div>
+
+        <div style={{ width: '1px', height: '4.5mm', background: '#cbd5e1' }} />
+
+        {/* Voice Calls */}
+        <div className="flex items-center gap-[2.2mm]">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" className="shrink-0">
+            <path
+              d="M4.5 4h3.5l1.8 4.5-2.2 1.35a10.5 10.5 0 0 0 4.5 4.5l1.35-2.2L18 14v3.5a1.8 1.8 0 0 1-1.8 1.8A15 15 0 0 1 3 5.8 1.8 1.8 0 0 1 4.5 4z"
+              fill="#0066d6"
+            />
+            <path
+              d="M14 3.5a6 6 0 0 1 6 6"
+              stroke="#0066d6"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            />
+            <path
+              d="M14 6.8a2.8 2.8 0 0 1 2.8 2.8"
+              stroke="#0066d6"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span className="font-semibold text-[#0a192f]" style={{ fontSize: '2.9mm' }}>
+            Voice Calls
+          </span>
+        </div>
+
+        <div style={{ width: '1px', height: '4.5mm', background: '#cbd5e1' }} />
+
+        {/* RCS SMS */}
+        <div className="flex items-center gap-[2.2mm]">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" className="shrink-0">
+            <rect x="2" y="3.5" width="20" height="14" rx="4.5" fill="#0080ff" />
+            <path d="M6 17.5L3 21V17.5H6Z" fill="#0080ff" />
+            <circle cx="7.8" cy="10.5" r="1.4" fill="#ffffff" />
+            <circle cx="12" cy="10.5" r="1.4" fill="#ffffff" />
+            <circle cx="16.2" cy="10.5" r="1.4" fill="#ffffff" />
+          </svg>
+          <span className="font-semibold text-[#0a192f]" style={{ fontSize: '2.9mm' }}>
+            RCS SMS
+          </span>
+        </div>
+
+        <div style={{ width: '1px', height: '4.5mm', background: '#cbd5e1' }} />
+
+        {/* Digital Marketing Services */}
+        <div className="flex items-center gap-[2.2mm]">
+          <svg width="20" height="19" viewBox="0 0 24 24" fill="none" className="shrink-0">
+            <rect x="2" y="13" width="3.2" height="8" rx="0.8" fill="#00a3ff" />
+            <rect x="7.2" y="9.5" width="3.2" height="11.5" rx="0.8" fill="#0080ff" />
+            <rect x="12.4" y="6" width="3.2" height="15" rx="0.8" fill="#0062d6" />
+            <rect x="17.6" y="2.5" width="3.2" height="18.5" rx="0.8" fill="#043ca6" />
+            <path
+              d="M3 10L8.5 5L13.5 8.5L20 2"
+              stroke="#0066d6"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M16 2H20V6"
+              stroke="#0066d6"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <div
+            className="leading-tight font-semibold text-[#0a192f]"
+            style={{ fontSize: '2.7mm' }}
+          >
+            <div>Digital Marketing</div>
+            <div>Services</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Bottom Wave Banner (Curved Navy & Slogan + Website) */}
+      <div className="relative w-full overflow-hidden" style={{ height: '15.5mm' }}>
+        <svg
+          viewBox="0 0 794 56"
+          className="absolute inset-0 block w-full h-full"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id="crmFooterNavyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#061e44" />
+              <stop offset="45%" stopColor="#0a2a5e" />
+              <stop offset="100%" stopColor="#0e3778" />
+            </linearGradient>
+          </defs>
+
+          {/* Right Section Shape */}
+          <path
+            d="M 794 0 L 794 56 L 436 56 C 420 28 402 4 374 0 L 794 0 Z"
+            fill="url(#crmFooterNavyGrad)"
+          />
+
+          {/* Left Navy Section Shape */}
+          <path
+            d="M 0 0 L 374 0 C 402 4 420 28 436 56 L 0 56 Z"
+            fill="#061e44"
+          />
+
+          {/* White Ribbon Divider */}
+          <path
+            d="M 374 0 C 402 4 420 28 436 56"
+            stroke="#ffffff"
+            strokeWidth="5"
+            strokeLinecap="round"
+            fill="none"
+          />
+        </svg>
+
+        {/* Content on Left: Slogan */}
+        <div
+          className="absolute flex items-center"
+          style={{ left: '12mm', top: 0, bottom: 0 }}
         >
           <span
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: '5.6mm',
-              height: '5.6mm',
-              backgroundColor: '#fff',
-              flexShrink: 0,
-            }}
+            className="italic font-extrabold text-white select-none tracking-wide"
+            style={{ fontSize: '4.1mm' }}
           >
-            <SvgIcon name="globe" color={BRAND_NAVY} size={3.3} />
+            <span>Smart Communication. </span>
+            <span
+              style={{
+                color: '#f26722',
+                textShadow: '0 1px 2px rgba(0,0,0,0.25)',
+              }}
+            >
+              Stronger Results.
+            </span>
           </span>
-          <span style={{ letterSpacing: '0.01em' }}>{site}</span>
-        </a>
-        <span style={{ opacity: 0.45 }}>|</span>
+        </div>
+
+        {/* Content on Right: Globe & Website */}
         <a
-          href={`mailto:${email}`}
-          className="flex items-center gap-[2.2mm]"
-          style={{ color: '#fff', textDecoration: 'none' }}
+          href={siteHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute flex items-center gap-[2.4mm] text-white no-underline transition-opacity hover:opacity-90"
+          style={{ right: '12mm', top: 0, bottom: 0 }}
         >
           <span
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: '5.6mm',
-              height: '5.6mm',
-              backgroundColor: '#fff',
-              flexShrink: 0,
-            }}
+            className="flex items-center justify-center rounded-full bg-white/20"
+            style={{ width: '6.2mm', height: '6.2mm' }}
           >
-            <SvgIcon name="mail" color={BRAND_NAVY} size={3.3} />
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
           </span>
-          <span style={{ letterSpacing: '0.01em' }}>{email}</span>
-        </a>
-        <span style={{ opacity: 0.45 }}>|</span>
-        <a
-          href={telHref}
-          className="flex items-center gap-[2.2mm]"
-          style={{ color: '#fff', textDecoration: 'none' }}
-        >
           <span
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: '5.6mm',
-              height: '5.6mm',
-              backgroundColor: '#fff',
-              flexShrink: 0,
-            }}
+            className="font-bold tracking-wide"
+            style={{ fontSize: '3.6mm' }}
           >
-            <SvgIcon name="phone" color={BRAND_NAVY} size={3.3} />
+            {displaySite}
           </span>
-          <span style={{ letterSpacing: '0.01em' }}>{phone}</span>
         </a>
       </div>
     </div>
