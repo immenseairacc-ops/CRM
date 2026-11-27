@@ -62,13 +62,23 @@ function formatTimeOnly(iso?: string | null): string {
   }
 }
 
+function getISTDay(d: Date = new Date()): string {
+  try {
+    const istTime = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
+    return istTime.toISOString().slice(0, 10);
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 function toISTDay(isoString?: string | null): string {
   if (!isoString) return '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) return isoString;
   try {
     const d = new Date(isoString);
-    if (isNaN(d.getTime())) return isoString.slice(0, 10);
-    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    if (isNaN(d.getTime())) return (isoString || '').slice(0, 10);
+    const istTime = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
+    return istTime.toISOString().slice(0, 10);
   } catch {
     return (isoString || '').slice(0, 10);
   }
@@ -80,36 +90,28 @@ function isDateInDashboardRange(dateString?: string | null, range: DashboardDate
   if (!dateString) return false;
   if (range === 'ALL_TIME') return true;
 
-  const istDateStr = toISTDay(dateString);
-  if (!istDateStr) return false;
+  const targetDay = toISTDay(dateString);
+  if (!targetDay) return false;
 
   const now = new Date();
-  const todayIST = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const todayDay = getISTDay(now);
 
   if (range === 'TODAY') {
-    return istDateStr === todayIST;
+    return targetDay === todayDay;
   }
 
-  const todayDate = new Date(`${todayIST}T00:00:00+05:30`);
-
   if (range === 'YESTERDAY') {
-    const yesterdayDate = new Date(todayDate);
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-    const yesterdayIST = yesterdayDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-    return istDateStr === yesterdayIST;
+    const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+    return targetDay === getISTDay(yesterday);
   }
 
   if (range === 'THIS_WEEK') {
-    const dayOfWeek = (todayDate.getDay() + 6) % 7; // 0 = Monday, 6 = Sunday
-    const monday = new Date(todayDate);
-    monday.setDate(monday.getDate() - dayOfWeek);
-    const mondayIST = monday.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-    return istDateStr >= mondayIST && istDateStr <= todayIST;
+    const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+    return targetDay >= getISTDay(sevenDaysAgo) && targetDay <= todayDay;
   }
 
   if (range === 'THIS_MONTH') {
-    const currentMonthPrefix = todayIST.slice(0, 7); // 'YYYY-MM'
-    return istDateStr.startsWith(currentMonthPrefix);
+    return targetDay.slice(0, 7) === todayDay.slice(0, 7);
   }
 
   return true;
@@ -1357,10 +1359,10 @@ export function OverviewSection({
             Dashboard View:
           </span>
           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-            {dashboardDateRange === 'TODAY' && `⚡ Aaj Ka Live Data (Today — ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })})`}
+            {dashboardDateRange === 'TODAY' && '⚡ Aaj Ka Live Data (Today)'}
             {dashboardDateRange === 'YESTERDAY' && '📅 Kal Ka Data (Yesterday)'}
             {dashboardDateRange === 'THIS_WEEK' && '📅 Is Hafte Ka Data (This Week)'}
-            {dashboardDateRange === 'THIS_MONTH' && `📅 Is Mahine Ka Data (${new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })})`}
+            {dashboardDateRange === 'THIS_MONTH' && '📅 Is Mahine Ka Data (This Month)'}
             {dashboardDateRange === 'ALL_TIME' && '🌐 All Time (Overall Total Data)'}
           </span>
         </div>
