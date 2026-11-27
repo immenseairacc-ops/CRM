@@ -21,7 +21,8 @@ export type NavTab =
   | 'onboarding'
   | 'recharges'
   | 'tickets'
-  | 'billing';
+  | 'billing'
+  | 'quotations';
 
 function formatShortDateTime(iso?: string | null): string {
   if (!iso) return 'Not scheduled';

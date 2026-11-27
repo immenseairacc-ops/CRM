@@ -28,8 +28,10 @@ import {
   X,
   Database,
   Smartphone,
+  FileText,
 } from 'lucide-react';
 import { BackupLogsModal } from '@/components/BackupLogsModal';
+import { QuotationsSection } from '@/components/QuotationsSection';
 import { CrmDatabase, Lead, RechargeRequest, User } from '@/types/crm';
 import { NavTab, OverviewSection } from '@/components/OverviewSection';
 import { LeadsSection } from '@/components/LeadsSection';
@@ -568,6 +570,12 @@ export default function CrmAppPage() {
             ).length
           : undefined,
       visible: role !== 'SUPPORT',
+    },
+    {
+      id: 'quotations',
+      label: 'Quotation Maker',
+      icon: FileText,
+      visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
     },
   ];
   const navItems = allNavItems.filter((item) => item.visible);
@@ -1153,6 +1161,10 @@ export default function CrmAppPage() {
 
           {activeTab === 'errors' && (role === 'SUPPORT' || role === 'ADMIN') && (
             <ErrorCodeHubSection />
+          )}
+
+          {activeTab === 'quotations' && (
+            <QuotationsSection currentUser={currentUser} />
           )}
         </main>
       </div>
