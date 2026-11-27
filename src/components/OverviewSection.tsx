@@ -62,6 +62,59 @@ function formatTimeOnly(iso?: string | null): string {
   }
 }
 
+function toISTDay(isoString?: string | null): string {
+  if (!isoString) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) return isoString;
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString.slice(0, 10);
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  } catch {
+    return (isoString || '').slice(0, 10);
+  }
+}
+
+export type DashboardDateRange = 'TODAY' | 'YESTERDAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'ALL_TIME';
+
+function isDateInDashboardRange(dateString?: string | null, range: DashboardDateRange = 'TODAY'): boolean {
+  if (!dateString) return false;
+  if (range === 'ALL_TIME') return true;
+
+  const istDateStr = toISTDay(dateString);
+  if (!istDateStr) return false;
+
+  const now = new Date();
+  const todayIST = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+  if (range === 'TODAY') {
+    return istDateStr === todayIST;
+  }
+
+  const todayDate = new Date(`${todayIST}T00:00:00+05:30`);
+
+  if (range === 'YESTERDAY') {
+    const yesterdayDate = new Date(todayDate);
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayIST = yesterdayDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    return istDateStr === yesterdayIST;
+  }
+
+  if (range === 'THIS_WEEK') {
+    const dayOfWeek = (todayDate.getDay() + 6) % 7; // 0 = Monday, 6 = Sunday
+    const monday = new Date(todayDate);
+    monday.setDate(monday.getDate() - dayOfWeek);
+    const mondayIST = monday.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    return istDateStr >= mondayIST && istDateStr <= todayIST;
+  }
+
+  if (range === 'THIS_MONTH') {
+    const currentMonthPrefix = todayIST.slice(0, 7); // 'YYYY-MM'
+    return istDateStr.startsWith(currentMonthPrefix);
+  }
+
+  return true;
+}
+
 function PngIcon({
   src,
   alt,
@@ -124,6 +177,9 @@ export function OverviewSection({
   const [amScheduleAgentFilter, setAmScheduleAgentFilter] = useState<string>('ALL');
   const [scheduleTab, setScheduleTab] = useState<'ALL' | 'FOLLOWUP' | 'MEET' | 'PENDING_45'>('ALL');
 
+  // Main Dashboard Data Horizon Filter (Defaults to TODAY)
+  const [dashboardDateRange, setDashboardDateRange] = useState<DashboardDateRange>('TODAY');
+
   useEffect(() => {
     let isMounted = true;
     const loadInboxPreview = async () => {
@@ -150,63 +206,119 @@ export function OverviewSection({
     };
   }, [currentUser?.id, currentUser?.mailConfig?.email]);
 
-  const totalLeads = db.leads.length;
-  const newLeads = db.leads.filter((l) => l.status === 'NEW').length;
-  const warmLeads = db.leads.filter((l) => l.status === 'WARM').length;
-  const hotLeads = db.leads.filter((l) => l.status === 'HOT').length;
-  const coldLeads = db.leads.filter((l) => l.status === 'COLD').length;
+  // Filter leads based on selected Dashboard date range
+  const filteredLeads = useMemo(() => {
+    return db.leads.filter((l) =>
+      dashboardDateRange === 'ALL_TIME'
+        ? true
+        : isDateInDashboardRange(l.leadDate || l.createdAt, dashboardDateRange)
+    );
+  }, [db.leads, dashboardDateRange]);
 
+  const totalLeads = db.leads.length;
+  const displayLeadsCount =
+    dashboardDateRange === 'ALL_TIME' ? totalLeads : filteredLeads.length;
+
+  // Pipeline counts in selected range
+  const newLeads = filteredLeads.filter((l) => l.status === 'NEW').length;
+  const warmLeads = filteredLeads.filter((l) => l.status === 'WARM').length;
+  const hotLeads = filteredLeads.filter((l) => l.status === 'HOT').length;
+  const coldLeads = filteredLeads.filter((l) => l.status === 'COLD').length;
+
+  // Overall active hot leads
+  const totalHotOverall = db.leads.filter((l) => l.status === 'HOT').length;
+
+  // Reminders in range
   const activeReminders = db.leads.filter(
     (l) => l.reminder && !l.reminder.completed
+  );
+  const remindersInRange = activeReminders.filter((l) =>
+    dashboardDateRange === 'ALL_TIME'
+      ? true
+      : isDateInDashboardRange(l.reminder?.datetime, dashboardDateRange)
   );
   const dueReminders = activeReminders.filter(
     (l) => l.reminder && new Date(l.reminder.datetime).getTime() <= Date.now()
   );
 
+  // Meets in range
+  const meetsInRange = db.meetRequests.filter((m) =>
+    dashboardDateRange === 'ALL_TIME'
+      ? true
+      : isDateInDashboardRange(m.scheduledDate || m.createdAt, dashboardDateRange)
+  );
   const meetCount =
     role === 'SUPPORT'
-      ? db.meetRequests.filter((m) => m.status === 'APPROVED').length
-      : db.meetRequests.length;
-  const scheduledMeetsCount = db.meetRequests.filter(
+      ? meetsInRange.filter((m) => m.status === 'APPROVED').length
+      : meetsInRange.length;
+  const scheduledMeetsCount = meetsInRange.filter(
     (m) => m.status === 'PENDING_APPROVAL' || m.status === 'APPROVED'
   ).length;
 
-  const onboardCount = db.onboardingRequests.length;
-  const onboardCreatedCount = db.onboardingRequests.filter(
+  // Onboardings in range
+  const onboardingsInRange = db.onboardingRequests.filter((o) =>
+    dashboardDateRange === 'ALL_TIME'
+      ? true
+      : isDateInDashboardRange(o.createdAt || o.updatedAt, dashboardDateRange)
+  );
+  const onboardCount = onboardingsInRange.length;
+  const onboardCreatedCount = onboardingsInRange.filter(
     (o) => o.status === 'ACCOUNT_CREATED'
   ).length;
-  const quotationsSentCount = db.leads.filter((l) => l.quotationSent).length;
+  const totalOnboardOverall = db.onboardingRequests.filter(
+    (o) => o.status === 'ACCOUNT_CREATED'
+  ).length;
 
-  const rechargeCount = db.rechargeRequests.length;
-  const pendingRechargeCount = db.rechargeRequests.filter(
+  // Quotations in range
+  const quotationsSentCount = db.leads.filter(
+    (l) =>
+      l.quotationSent &&
+      (dashboardDateRange === 'ALL_TIME'
+        ? true
+        : isDateInDashboardRange(l.quotationSentDate || l.updatedAt, dashboardDateRange))
+  ).length;
+
+  // Recharges in range
+  const rechargesInRange = db.rechargeRequests.filter((r) =>
+    dashboardDateRange === 'ALL_TIME'
+      ? true
+      : isDateInDashboardRange(r.createdAt || r.updatedAt, dashboardDateRange)
+  );
+  const rechargeCount = rechargesInRange.length;
+  const pendingRechargeCount = rechargesInRange.filter(
     (r) => r.status === 'PENDING_APPROVAL'
   ).length;
-  const supportRechargeQueue = db.rechargeRequests.filter(
+  const supportRechargeQueue = rechargesInRange.filter(
     (r) => r.status === 'APPROVED_FOR_SUPPORT'
   ).length;
-  const billingQueueCount = db.rechargeRequests.filter(
+  const billingQueueCount = rechargesInRange.filter(
     (r) => r.status === 'RECHARGE_COMPLETED'
   ).length;
+  const billedRevenueInRange = rechargesInRange
+    .filter((r) => r.status === 'BILLED')
+    .reduce((s, r) => s + r.amount, 0);
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const supportTodayFollowUpsCount = db.leads.filter(
     (l) =>
       l.reminder &&
       !l.reminder.completed &&
-      l.reminder.datetime &&
-      l.reminder.datetime.slice(0, 10) <= todayStr &&
+      isDateInDashboardRange(l.reminder.datetime, dashboardDateRange) &&
       (l.reminder.reminderType === 'SUPPORT_CALL' ||
         l.reminder.targetRole === 'SUPPORT' ||
         l.status === 'HOT')
   ).length;
-  const supportTodayMeetsCount = db.meetRequests.filter(
-    (m) =>
-      (m.status === 'APPROVED' || m.status === 'PENDING_APPROVAL') &&
-      (m.scheduledDate === todayStr || !m.scheduledDate)
+  const supportTodayMeetsCount = meetsInRange.filter(
+    (m) => m.status === 'APPROVED' || m.status === 'PENDING_APPROVAL'
   ).length;
   const totalErrorCodesCount = (errorsData as unknown as unknown[]).length;
-  const totalTicketsCount = (db.supportTickets || []).length;
-  const openTicketsCount = (db.supportTickets || []).filter(
+  const ticketsInRange = (db.supportTickets || []).filter((t) =>
+    dashboardDateRange === 'ALL_TIME'
+      ? true
+      : isDateInDashboardRange(t.createdAt || t.updatedAt, dashboardDateRange)
+  );
+  const totalTicketsCount = ticketsInRange.length;
+  const openTicketsCount = ticketsInRange.filter(
     (t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED'
   ).length;
 
@@ -214,7 +326,7 @@ export function OverviewSection({
   const kpiCards = isSupport
     ? [
         {
-          label: 'Total Tickets',
+          label: dashboardDateRange === 'TODAY' ? "Today's Tickets" : 'Total Tickets',
           value: totalTicketsCount,
           sub: `${openTicketsCount} Open / Active`,
           subColor: 'text-orange-600',
@@ -224,7 +336,7 @@ export function OverviewSection({
           tab: 'tickets' as NavTab,
         },
         {
-          label: 'Support Follow-ups Today',
+          label: dashboardDateRange === 'TODAY' ? 'Support Follow-ups Today' : 'Support Follow-ups',
           value: supportTodayFollowUpsCount,
           sub: 'Technical & queries due',
           subColor: supportTodayFollowUpsCount > 0 ? 'text-rose-600' : 'text-violet-600',
@@ -244,7 +356,7 @@ export function OverviewSection({
           tab: 'errors' as NavTab,
         },
         {
-          label: "Today's Meets",
+          label: dashboardDateRange === 'TODAY' ? "Today's Meets" : 'Meetings / Demos',
           value: supportTodayMeetsCount,
           sub: 'Demos & walkthroughs',
           subColor: 'text-amber-700',
@@ -254,7 +366,7 @@ export function OverviewSection({
           tab: 'meets' as NavTab,
         },
         {
-          label: 'Recharge Requests',
+          label: dashboardDateRange === 'TODAY' ? "Today's Top-Ups" : 'Recharge Requests',
           value: supportRechargeQueue,
           sub: `${supportRechargeQueue} ready to credit`,
           subColor: 'text-cyan-700',
@@ -268,12 +380,16 @@ export function OverviewSection({
     {
       label:
         role === 'AGENT'
-          ? 'My Leads'
+          ? (dashboardDateRange === 'TODAY' ? "Today's Leads" : 'My Leads')
           : isBilling
-          ? 'Active Accounts'
-          : 'Total Leads',
-      value: isBilling ? onboardCreatedCount : totalLeads,
-      sub: !isBilling ? '+12% this month' : 'Provisioned clients',
+          ? (dashboardDateRange === 'TODAY' ? "Today's Accounts" : 'Active Accounts')
+          : (dashboardDateRange === 'TODAY' ? "Today's Leads" : 'Total Leads'),
+      value: isBilling ? onboardCreatedCount : displayLeadsCount,
+      sub: dashboardDateRange === 'TODAY'
+        ? `${totalLeads} total in CRM`
+        : !isBilling
+        ? `${displayLeadsCount} leads in period`
+        : 'Provisioned clients',
       subColor: 'text-emerald-600',
       cardCls: 'bg-sky-50/80 border-sky-200/80',
       iconWrap: 'bg-sky-100/90',
@@ -281,9 +397,9 @@ export function OverviewSection({
       tab: (isBilling ? 'onboarding' : 'leads') as NavTab,
     },
     {
-      label: 'Hot Leads',
-      value: hotLeads,
-      sub: 'Ready for meet / deal',
+      label: dashboardDateRange === 'TODAY' ? "Today's Hot Leads" : 'Hot Leads',
+      value: hotLeads > 0 ? hotLeads : totalHotOverall,
+      sub: hotLeads > 0 ? `${totalHotOverall} total hot leads` : 'Ready for meet / deal',
       subColor: 'text-orange-600',
       cardCls: 'bg-orange-50/75 border-orange-200/80',
       iconWrap: 'bg-orange-100/90',
@@ -291,11 +407,13 @@ export function OverviewSection({
       tab: 'leads' as NavTab,
     },
     {
-      label: 'Follow-ups',
-      value: activeReminders.length,
+      label: dashboardDateRange === 'TODAY' ? "Today's Follow-ups" : 'Follow-ups',
+      value: remindersInRange.length,
       sub:
         dueReminders.length > 0
           ? `${dueReminders.length} due right now`
+          : dashboardDateRange === 'TODAY'
+          ? 'Callbacks scheduled today'
           : 'Callbacks scheduled',
       subColor: dueReminders.length > 0 ? 'text-rose-600' : 'text-violet-600',
       cardCls: 'bg-violet-50/75 border-violet-200/80',
@@ -304,9 +422,9 @@ export function OverviewSection({
       tab: (isBilling ? 'overview' : 'reminders') as NavTab,
     },
     {
-      label: 'Meetings / Visits',
+      label: dashboardDateRange === 'TODAY' ? "Today's Meetings" : 'Meetings / Visits',
       value: meetCount,
-      sub: 'Client demos',
+      sub: `${scheduledMeetsCount} client demos`,
       subColor: 'text-amber-700',
       cardCls: 'bg-amber-50/80 border-amber-200/80',
       iconWrap: 'bg-amber-100/90',
@@ -314,9 +432,9 @@ export function OverviewSection({
       tab: (isBilling ? 'billing' : 'meets') as NavTab,
     },
     {
-      label: 'Onboardings',
+      label: dashboardDateRange === 'TODAY' ? "Today's Onboardings" : 'Onboardings',
       value: onboardCount,
-      sub: `${onboardCreatedCount} live accounts`,
+      sub: `${onboardCreatedCount} live accounts (${totalOnboardOverall} total)`,
       subColor: 'text-indigo-600',
       cardCls: 'bg-indigo-50/75 border-indigo-200/80',
       iconWrap: 'bg-indigo-100/90',
@@ -324,9 +442,13 @@ export function OverviewSection({
       tab: 'onboarding' as NavTab,
     },
     {
-      label: isBilling ? 'Billing Queue' : 'Recharge Requests',
+      label: isBilling
+        ? (dashboardDateRange === 'TODAY' ? "Today's Billing Queue" : 'Billing Queue')
+        : (dashboardDateRange === 'TODAY' ? "Today's Recharges" : 'Recharge Requests'),
       value: isBilling ? billingQueueCount : rechargeCount,
-      sub: isBilling
+      sub: billedRevenueInRange > 0
+        ? `${formatINR(billedRevenueInRange)} billed`
+        : isBilling
         ? 'Ready for Tax Invoice'
         : `${pendingRechargeCount} Pending Approval`,
       subColor: 'text-amber-600',
@@ -337,15 +459,21 @@ export function OverviewSection({
     },
   ];
 
-  // Pipeline bar chart data
+  // Pipeline bar chart data (shows period leads if present, else active pipeline)
+  const pipelineDataSource = filteredLeads.length > 0 ? filteredLeads : db.leads;
+  const pNew = pipelineDataSource.filter((l) => l.status === 'NEW').length;
+  const pWarm = pipelineDataSource.filter((l) => l.status === 'WARM').length;
+  const pHot = pipelineDataSource.filter((l) => l.status === 'HOT').length;
+  const pCold = pipelineDataSource.filter((l) => l.status === 'COLD').length;
+
   const pipelineRows = [
-    { label: 'New', count: newLeads, bar: 'bg-sky-400' },
-    { label: 'Warm / Contacted', count: warmLeads, bar: 'bg-violet-400' },
-    { label: 'Hot / Interested', count: hotLeads, bar: 'bg-emerald-400' },
+    { label: 'New', count: pNew, bar: 'bg-sky-400' },
+    { label: 'Warm / Contacted', count: pWarm, bar: 'bg-violet-400' },
+    { label: 'Hot / Interested', count: pHot, bar: 'bg-emerald-400' },
     { label: 'Quotation Sent', count: quotationsSentCount, bar: 'bg-indigo-400' },
     { label: 'Meet Scheduled', count: scheduledMeetsCount, bar: 'bg-amber-400' },
     { label: 'Onboarded / Won', count: onboardCreatedCount, bar: 'bg-teal-400' },
-    { label: 'Cold / On Hold', count: coldLeads, bar: 'bg-slate-400' },
+    { label: 'Cold / On Hold', count: pCold, bar: 'bg-slate-400' },
   ];
   const maxPipeline = Math.max(1, ...pipelineRows.map((p) => p.count));
 
@@ -1218,6 +1346,79 @@ export function OverviewSection({
         </span>
       </div>
 
+      {/* Date Horizon Filter Strip (Defaults to TODAY) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/90 shadow-sm">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="flex h-2.5 w-2.5 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <span className="text-xs font-bold text-slate-800">
+            Dashboard View:
+          </span>
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            {dashboardDateRange === 'TODAY' && `⚡ Aaj Ka Live Data (Today — ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })})`}
+            {dashboardDateRange === 'YESTERDAY' && '📅 Kal Ka Data (Yesterday)'}
+            {dashboardDateRange === 'THIS_WEEK' && '📅 Is Hafte Ka Data (This Week)'}
+            {dashboardDateRange === 'THIS_MONTH' && `📅 Is Mahine Ka Data (${new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })})`}
+            {dashboardDateRange === 'ALL_TIME' && '🌐 All Time (Overall Total Data)'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl text-xs font-medium self-start md:self-auto overflow-x-auto max-w-full">
+          <button
+            onClick={() => setDashboardDateRange('TODAY')}
+            className={`px-3 py-1.5 rounded-lg transition-all font-semibold shrink-0 ${
+              dashboardDateRange === 'TODAY'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            ⚡ Today (Aaj)
+          </button>
+          <button
+            onClick={() => setDashboardDateRange('YESTERDAY')}
+            className={`px-3 py-1.5 rounded-lg transition-all shrink-0 ${
+              dashboardDateRange === 'YESTERDAY'
+                ? 'bg-indigo-600 text-white shadow-sm font-semibold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            Yesterday (Kal)
+          </button>
+          <button
+            onClick={() => setDashboardDateRange('THIS_WEEK')}
+            className={`px-3 py-1.5 rounded-lg transition-all shrink-0 ${
+              dashboardDateRange === 'THIS_WEEK'
+                ? 'bg-indigo-600 text-white shadow-sm font-semibold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            This Week
+          </button>
+          <button
+            onClick={() => setDashboardDateRange('THIS_MONTH')}
+            className={`px-3 py-1.5 rounded-lg transition-all shrink-0 ${
+              dashboardDateRange === 'THIS_MONTH'
+                ? 'bg-indigo-600 text-white shadow-sm font-semibold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            This Month
+          </button>
+          <button
+            onClick={() => setDashboardDateRange('ALL_TIME')}
+            className={`px-3 py-1.5 rounded-lg transition-all shrink-0 ${
+              dashboardDateRange === 'ALL_TIME'
+                ? 'bg-slate-800 text-white shadow-sm font-semibold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            All Time
+          </button>
+        </div>
+      </div>
+
       {/* ROW 1: Pastel KPI Cards */}
       <div
         className={
@@ -1856,28 +2057,91 @@ export function OverviewSection({
               <thead>
                 <tr className="border-b border-slate-200 text-left font-semibold text-slate-500 uppercase">
                   <th className="py-2 pr-4">Agent</th>
-                  <th className="py-2 px-3">Assigned</th>
+                  <th className="py-2 px-3">
+                    Assigned {dashboardDateRange === 'TODAY' ? '(Today)' : ''}
+                  </th>
+                  <th className="py-2 px-3">
+                    Calls {dashboardDateRange === 'TODAY' ? '(Today)' : ''}
+                  </th>
                   <th className="py-2 px-3">Hot</th>
                   <th className="py-2 px-3">Warm</th>
                   <th className="py-2 px-3">Cold</th>
-                  <th className="py-2 px-3">Onboarded</th>
-                  <th className="py-2 pl-3">Billed Revenue</th>
+                  <th className="py-2 px-3">
+                    Onboarded {dashboardDateRange === 'TODAY' ? '(Today)' : ''}
+                  </th>
+                  <th className="py-2 pl-3">
+                    Billed Revenue {dashboardDateRange === 'TODAY' ? '(Today)' : ''}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {agents.map((agent) => {
-                  const agentLeads = db.leads.filter(
+                  const agentLeadsTotal = db.leads.filter(
                     (l) => l.assignedToAgentId === agent.id
                   );
-                  const agentOnb = db.onboardingRequests.filter(
-                    (o) =>
-                      o.agentId === agent.id && o.status === 'ACCOUNT_CREATED'
+                  const agentLeadsInRange = agentLeadsTotal.filter((l) =>
+                    dashboardDateRange === 'ALL_TIME'
+                      ? true
+                      : isDateInDashboardRange(l.leadDate || l.createdAt || l.updatedAt, dashboardDateRange)
+                  );
+                  const agentCallsInRange = db.leads.reduce(
+                    (sum, lead) =>
+                      sum +
+                      (lead.callLogs || []).filter(
+                        (cl) =>
+                          cl.createdBy === agent.name &&
+                          (dashboardDateRange === 'ALL_TIME'
+                            ? true
+                            : isDateInDashboardRange(cl.createdAt, dashboardDateRange))
+                      ).length,
+                    0
+                  );
+                  const agentHotInRange = agentLeadsTotal.filter(
+                    (l) =>
+                      l.status === 'HOT' &&
+                      (dashboardDateRange === 'ALL_TIME'
+                        ? true
+                        : isDateInDashboardRange(l.updatedAt || l.createdAt, dashboardDateRange))
                   ).length;
-                  const agentRev = db.rechargeRequests
+                  const agentOnbTotal = db.onboardingRequests.filter(
+                    (o) => o.agentId === agent.id && o.status === 'ACCOUNT_CREATED'
+                  ).length;
+                  const agentOnbInRange = db.onboardingRequests.filter(
+                    (o) =>
+                      o.agentId === agent.id &&
+                      o.status === 'ACCOUNT_CREATED' &&
+                      (dashboardDateRange === 'ALL_TIME'
+                        ? true
+                        : isDateInDashboardRange(o.createdAt || o.updatedAt, dashboardDateRange))
+                  ).length;
+                  const agentRevTotal = db.rechargeRequests
                     .filter(
                       (r) => r.agentId === agent.id && r.status === 'BILLED'
                     )
                     .reduce((s, r) => s + r.amount, 0);
+                  const agentRevInRange = db.rechargeRequests
+                    .filter(
+                      (r) =>
+                        r.agentId === agent.id &&
+                        r.status === 'BILLED' &&
+                        (dashboardDateRange === 'ALL_TIME'
+                          ? true
+                          : isDateInDashboardRange(r.updatedAt || r.createdAt, dashboardDateRange))
+                    )
+                    .reduce((s, r) => s + r.amount, 0);
+
+                  const displayAssigned =
+                    dashboardDateRange === 'ALL_TIME'
+                      ? agentLeadsTotal.length
+                      : agentLeadsInRange.length;
+                  const displayOnb =
+                    dashboardDateRange === 'ALL_TIME'
+                      ? agentOnbTotal
+                      : agentOnbInRange;
+                  const displayRev =
+                    dashboardDateRange === 'ALL_TIME'
+                      ? agentRevTotal
+                      : agentRevInRange;
 
                   return (
                     <tr key={agent.id} className="hover:bg-slate-50/70">
@@ -1896,29 +2160,59 @@ export function OverviewSection({
                           </div>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 font-semibold text-slate-700">
-                        {agentLeads.length}
+                      <td className="py-2.5 px-3">
+                        <span className="font-semibold text-slate-800">
+                          {displayAssigned}
+                        </span>
+                        {dashboardDateRange !== 'ALL_TIME' && (
+                          <span className="text-[10px] text-slate-400 block">
+                            {agentLeadsTotal.length} total
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className={`px-2 py-0.5 rounded-full font-semibold ${
+                          agentCallsInRange > 0
+                            ? 'bg-indigo-50 text-indigo-700'
+                            : 'bg-slate-100 text-slate-400'
+                        }`}>
+                          {agentCallsInRange} calls
+                        </span>
                       </td>
                       <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded-full font-semibold bg-rose-50 text-rose-700">
-                          {agentLeads.filter((l) => l.status === 'HOT').length}
+                          {agentHotInRange > 0 ? agentHotInRange : agentLeadsTotal.filter((l) => l.status === 'HOT').length}
                         </span>
                       </td>
                       <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-700">
-                          {agentLeads.filter((l) => l.status === 'WARM').length}
+                          {agentLeadsTotal.filter((l) => l.status === 'WARM').length}
                         </span>
                       </td>
                       <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded-full font-semibold bg-cyan-50 text-cyan-700">
-                          {agentLeads.filter((l) => l.status === 'COLD').length}
+                          {agentLeadsTotal.filter((l) => l.status === 'COLD').length}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 font-medium text-slate-700">
-                        {agentOnb}
+                      <td className="py-2.5 px-3">
+                        <span className="font-medium text-slate-700">
+                          {displayOnb}
+                        </span>
+                        {dashboardDateRange !== 'ALL_TIME' && agentOnbTotal > 0 && (
+                          <span className="text-[10px] text-slate-400 block">
+                            {agentOnbTotal} total
+                          </span>
+                        )}
                       </td>
-                      <td className="py-2.5 pl-3 font-semibold text-emerald-700">
-                        {formatINR(agentRev)}
+                      <td className="py-2.5 pl-3">
+                        <span className="font-semibold text-emerald-700">
+                          {formatINR(displayRev)}
+                        </span>
+                        {dashboardDateRange !== 'ALL_TIME' && agentRevTotal > 0 && (
+                          <span className="text-[10px] text-slate-400 block">
+                            {formatINR(agentRevTotal)} total
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );
