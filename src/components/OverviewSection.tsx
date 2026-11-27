@@ -446,6 +446,75 @@ export function OverviewSection({
   ];
   const maxPipeline = Math.max(1, ...pipelineRows.map((p) => p.count));
 
+  // Support Tickets Breakdown & Pipeline (Tailored specifically for SUPPORT role)
+  // Kitna Aaya, Kitna Resolve Hua, In Progress, Open, Urgent Escalations
+  const ticketsDataSource = (db.supportTickets && db.supportTickets.length > 0)
+    ? (ticketsInRange.length > 0 ? ticketsInRange : db.supportTickets)
+    : [];
+  const sTicketsReceived = ticketsDataSource.length;
+  const sTicketsResolved = ticketsDataSource.filter(
+    (t) => t.status === 'RESOLVED' || t.status === 'CLOSED'
+  ).length;
+  const sTicketsInProgress = ticketsDataSource.filter(
+    (t) => t.status === 'IN_PROGRESS'
+  ).length;
+  const sTicketsOpen = ticketsDataSource.filter(
+    (t) => t.status === 'OPEN'
+  ).length;
+  const sTicketsUrgent = ticketsDataSource.filter(
+    (t) =>
+      (t.priority === 'URGENT' || t.priority === 'HIGH') &&
+      t.status !== 'RESOLVED' &&
+      t.status !== 'CLOSED'
+  ).length;
+  const sResolutionRate = sTicketsReceived > 0
+    ? Math.round((sTicketsResolved / sTicketsReceived) * 100)
+    : 100;
+
+  const supportTicketRows = [
+    {
+      label: 'Total Tickets Aaya (Received)',
+      count: sTicketsReceived,
+      bar: 'bg-indigo-500',
+      dot: 'bg-indigo-500',
+      badge: 'Total',
+      badgeCls: 'bg-indigo-50 text-indigo-700',
+    },
+    {
+      label: 'Resolve Hua (Solved & Closed)',
+      count: sTicketsResolved,
+      bar: 'bg-emerald-500',
+      dot: 'bg-emerald-500',
+      badge: sTicketsReceived > 0 ? `${sResolutionRate}%` : '0%',
+      badgeCls: 'bg-emerald-50 text-emerald-700',
+    },
+    {
+      label: 'In Progress (Active Work)',
+      count: sTicketsInProgress,
+      bar: 'bg-blue-500',
+      dot: 'bg-blue-500',
+      badge: 'Working',
+      badgeCls: 'bg-blue-50 text-blue-700',
+    },
+    {
+      label: 'Open / Pending Action',
+      count: sTicketsOpen,
+      bar: 'bg-amber-500',
+      dot: 'bg-amber-500',
+      badge: 'Pending',
+      badgeCls: 'bg-amber-50 text-amber-700',
+    },
+    {
+      label: 'Urgent & High Priority',
+      count: sTicketsUrgent,
+      bar: 'bg-rose-500',
+      dot: 'bg-rose-500',
+      badge: 'Priority',
+      badgeCls: 'bg-rose-50 text-rose-700',
+    },
+  ];
+  const maxSupportTickets = Math.max(1, sTicketsReceived, ...supportTicketRows.map((r) => r.count));
+
   // Schedule & Reminders Timeline - Role-wise Tailored
   const scheduleItems = useMemo(() => {
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -1440,55 +1509,116 @@ export function OverviewSection({
 
       {/* ROW 2: 3-Column Middle Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Card 1: Lead Pipeline & Stage Funnel */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3.5">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <PngIcon src="/icons/pipeline.png" alt="Lead Pipeline" className="w-4 h-4" />
-                Lead Pipeline &amp; Conversion
-              </h3>
+        {/* Card 1: Support Tickets Pipeline (for SUPPORT) OR Lead Pipeline & Stage Funnel (for Sales/AM/Admin) */}
+        {isSupport ? (
+          <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3.5">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Headphones className="w-4 h-4 text-purple-600" />
+                  Support Tickets &amp; Resolution
+                </h3>
+                <button
+                  onClick={() => onNavigate('tickets')}
+                  className="text-[11px] font-semibold text-purple-600 hover:underline flex items-center gap-1"
+                >
+                  View Tickets →
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {supportTicketRows.map((row) => {
+                  const pct = Math.round((row.count / maxSupportTickets) * 100);
+                  return (
+                    <div key={row.label} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${row.dot}`} />
+                          {row.label}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-extrabold text-slate-900">{row.count}</span>
+                          {row.badge && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${row.badgeCls}`}>
+                              {row.badge}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${row.bar}`}
+                          style={{ width: `${Math.max(row.count > 0 ? 8 : 0, pct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-medium">
+                Resolution: <strong className="text-emerald-700 font-bold">{sResolutionRate}%</strong> ({sTicketsResolved}/{sTicketsReceived} Resolved)
+              </span>
               <button
-                onClick={() => onNavigate('leads')}
-                className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1"
+                onClick={() => onNavigate('tickets')}
+                className="text-xs font-bold text-purple-600 hover:underline"
               >
-                View Leads →
+                Open Ticket Desk →
               </button>
             </div>
+          </div>
+        ) : (
+          <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3.5">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <PngIcon src="/icons/pipeline.png" alt="Lead Pipeline" className="w-4 h-4" />
+                  Lead Pipeline &amp; Conversion
+                </h3>
+                <button
+                  onClick={() => onNavigate('leads')}
+                  className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1"
+                >
+                  View Leads →
+                </button>
+              </div>
 
-            <div className="space-y-3">
-              {pipelineRows.map((row) => {
-                const pct = Math.round((row.count / maxPipeline) * 100);
-                return (
-                  <div key={row.label} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-700">{row.label}</span>
-                      <span className="font-extrabold text-slate-900">{row.count}</span>
+              <div className="space-y-3">
+                {pipelineRows.map((row) => {
+                  const pct = Math.round((row.count / maxPipeline) * 100);
+                  return (
+                    <div key={row.label} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-700">{row.label}</span>
+                        <span className="font-extrabold text-slate-900">{row.count}</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${row.bar}`}
+                          style={{ width: `${Math.max(row.count > 0 ? 8 : 0, pct)}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${row.bar}`}
-                        style={{ width: `${Math.max(row.count > 0 ? 8 : 0, pct)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-medium">
+                Total Active Leads: <strong className="text-slate-800">{pipelineDataSource.length}</strong>
+              </span>
+              <button
+                onClick={() => onNavigate('leads')}
+                className="text-xs font-bold text-indigo-600 hover:underline"
+              >
+                Open Distribution →
+              </button>
             </div>
           </div>
-
-          <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">
-              Total Active Leads: <strong className="text-slate-800">{pipelineDataSource.length}</strong>
-            </span>
-            <button
-              onClick={() => onNavigate('leads')}
-              className="text-xs font-bold text-indigo-600 hover:underline"
-            >
-              Open Distribution →
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Card 2: Today's Schedule & Reminders */}
         <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm">
@@ -1793,8 +1923,7 @@ export function OverviewSection({
         </div>
       </div>
 
-      {/* Support Tickets (Ticket Rise) Overview Widget (Hidden for Support role) */}
-      {!isSupport && (
+      {/* Support Tickets (Ticket Rise) Overview Widget */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2.5">
@@ -1957,7 +2086,6 @@ export function OverviewSection({
           </div>
         </div>
       </div>
-      )}
 
       {/* Admin Operations SLA & Work Latency Monitor (Zero-Delay Radar) */}
       {currentUser.role === 'ADMIN' && (

@@ -557,6 +557,82 @@ export function createSeedDatabase(): CrmDatabase {
     rechargeRequests,
     activityLogs: [],
     notifications,
+    supportTickets: [
+      {
+        id: 'tkt-1',
+        teamId: 'team-a',
+        username: '@apexsolutions',
+        companyName: 'Apex Retail Solutions',
+        fromUserId: 'usr-agent-1',
+        fromUserName: 'Rahul Sharma',
+        fromUserRole: 'AGENT',
+        targetRole: 'SUPPORT',
+        serviceCategory: 'Bulk SMS',
+        priority: 'MEDIUM',
+        subject: 'DLT Header / Sender ID whitelisting on Airtel route',
+        description: 'Client needs their promotional sender ID APEXIN whitelisted on operator priority bind.',
+        status: 'RESOLVED',
+        supportResolutionNote: 'Sender ID whitelisted and verified on Airtel live DLT gateway.',
+        resolvedBy: 'Neha Verma',
+        resolvedAt: iso(-240),
+        createdAt: iso(-600),
+        updatedAt: iso(-240),
+      },
+      {
+        id: 'tkt-2',
+        teamId: 'team-a',
+        username: '@zencarehosp',
+        companyName: 'ZenCare Health',
+        fromUserId: 'usr-agent-2',
+        fromUserName: 'Priya Patel',
+        fromUserRole: 'AGENT',
+        targetRole: 'SUPPORT',
+        serviceCategory: 'WhatsApp API',
+        priority: 'HIGH',
+        subject: 'WhatsApp Meta green tick & template rejection',
+        description: 'Utility appointment template got rejected by Meta policy. Need assistance with template body formatting.',
+        status: 'RESOLVED',
+        supportResolutionNote: 'Variable placeholders corrected as per Meta 2026 guidelines. Template approved.',
+        resolvedBy: 'Neha Verma',
+        resolvedAt: iso(-180),
+        createdAt: iso(-480),
+        updatedAt: iso(-180),
+      },
+      {
+        id: 'tkt-3',
+        teamId: 'team-a',
+        username: '@quickpayfin',
+        companyName: 'QuickPay Fintech',
+        fromUserId: 'usr-agent-1',
+        fromUserName: 'Rahul Sharma',
+        fromUserRole: 'AGENT',
+        targetRole: 'SUPPORT',
+        serviceCategory: 'OTP SMS',
+        priority: 'URGENT',
+        subject: 'OTP delivery latency check for login flow',
+        description: 'Customer reported average OTP delivery time increased from 2s to 6s during peak 2 PM traffic.',
+        status: 'IN_PROGRESS',
+        createdAt: iso(-120),
+        updatedAt: iso(-30),
+      },
+      {
+        id: 'tkt-4',
+        teamId: 'team-a',
+        username: '@bluestarlog',
+        companyName: 'BlueStar Logistics',
+        fromUserId: 'usr-agent-3',
+        fromUserName: 'Amit Kumar',
+        fromUserRole: 'AGENT',
+        targetRole: 'SUPPORT',
+        serviceCategory: 'RCS SMS',
+        priority: 'MEDIUM',
+        subject: 'RCS Rich Card Carousel rendering test',
+        description: 'Client wants test payloads for consignment live tracking buttons on Google RCS app.',
+        status: 'OPEN',
+        createdAt: iso(-45),
+        updatedAt: iso(-45),
+      },
+    ],
     chatMessages: [
       {
         id: 'msg-1',
@@ -636,6 +712,9 @@ export function readDatabase(): CrmDatabase {
         ? u.managerId || 'usr-am-1'
         : undefined,
   }));
+  if (!parsed.supportTickets || parsed.supportTickets.length === 0) {
+    parsed.supportTickets = createSeedDatabase().supportTickets || [];
+  }
   cachedDb = parsed;
   cachedMtimeMs = stat.mtimeMs;
   return cachedDb;
@@ -955,6 +1034,9 @@ export function sanitizeForRole(
       onboardingRequests: maskedOnboarding,
       rechargeRequests: sanitizedRecharges,
       supportTickets: (db.supportTickets || []).filter((t) =>
+        t.targetRole === 'SUPPORT' ||
+        !t.targetRole ||
+        t.targetUserId === userId ||
         belongsToMyTeam(t.teamId, t.agentId || t.fromUserId)
       ),
       notifications: filterNotifications(db.notifications),
