@@ -366,13 +366,14 @@ export function CuteAgentAvatar({ size = 36 }: { size?: number }) {
   );
 }
 
-export function getPaymentBreakdown(item: {
+export function getPaymentBreakdown(item?: {
   amount?: number;
   billingPaymentStatus?: string;
   paymentMode?: string;
   paidAmount?: number;
   balanceAmount?: number;
-}) {
+} | null) {
+  if (!item) return { total: 0, paid: 0, balance: 0, status: 'PENDING' };
   const total = Number(item.amount || 0);
   const status =
     item.billingPaymentStatus || (item.paymentMode === 'POSTPAID' ? 'PENDING' : 'PAID');

@@ -365,8 +365,8 @@ export default function CrmAppPage() {
   }
 
   const role = currentUser.role;
-  const unreadCount = db.notifications.filter(
-    (n) => !n.readBy.includes(currentUser.id)
+  const unreadCount = (db.notifications || []).filter(
+    (n) => !(n.readBy || []).includes(currentUser.id)
   ).length;
 
   const dueRemindersCount = useMemo(() => {
@@ -791,8 +791,8 @@ export default function CrmAppPage() {
                           No notifications for this role yet.
                         </div>
                       ) : (
-                        db.notifications.slice(0, 15).map((n) => {
-                          const isUnread = !n.readBy.includes(currentUser.id);
+                        (db.notifications || []).slice(0, 15).map((n) => {
+                          const isUnread = !(n.readBy || []).includes(currentUser.id);
                           return (
                             <div
                               key={n.id}
@@ -1063,7 +1063,7 @@ export default function CrmAppPage() {
             />
           )}
 
-          {activeTab === 'recharges' && (
+          {(activeTab === 'recharges' || (activeTab as string) === 'recharge') && (
             <RechargeSection
               db={db}
               currentUser={currentUser}

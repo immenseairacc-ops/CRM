@@ -138,7 +138,8 @@ export function BillingSection({
   const [receiptRecharge, setReceiptRecharge] = useState<RechargeRequest | null>(null);
 
   // Helper to compute exact paid & balance due for any billed item
-  const getPaymentBreakdown = (item: RechargeRequest) => {
+  const getPaymentBreakdown = (item?: RechargeRequest | null) => {
+    if (!item) return { total: 0, paid: 0, balance: 0, status: 'PENDING' as PaymentStatus };
     const total = Number(item.amount || 0);
     const status: PaymentStatus =
       item.billingPaymentStatus || (item.paymentMode === 'POSTPAID' ? 'PENDING' : 'PAID');

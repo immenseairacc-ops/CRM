@@ -13,15 +13,15 @@ export default function GlobalError({
     console.error('Unhandled Global Root Error:', error);
   }, [error]);
 
-  const handleHardReload = () => {
+  const handleHardReset = () => {
     if (typeof window !== 'undefined') {
       try {
+        localStorage.clear();
         sessionStorage.clear();
-        localStorage.removeItem('crm_active_tab');
       } catch {
         // silent
       }
-      window.location.href = window.location.origin + window.location.pathname + '?reload=' + Date.now();
+      window.location.href = window.location.origin + window.location.pathname + '?reset=' + Date.now();
     } else {
       reset();
     }
@@ -37,15 +37,24 @@ export default function GlobalError({
           <h2 className="text-xl font-bold text-slate-900 mb-2">
             CRM Workspace Updated
           </h2>
-          <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-            The Immense Air CRM application was updated with new features and optimizations. Click below to load the latest version.
+          <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+            The Immense Air CRM application was updated. Click below to load with a fresh cache.
           </p>
+
+          {error?.message && (
+            <div className="mb-4 text-left">
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-[11px] font-mono text-rose-800 break-all leading-relaxed max-h-32 overflow-y-auto">
+                <strong>Error:</strong> {error.message}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-3">
             <button
-              onClick={handleHardReload}
+              onClick={handleHardReset}
               className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-2"
             >
-              🔄 Load Latest CRM Workspace
+              🔄 Clear Cache & Load CRM
             </button>
             <button
               onClick={() => reset()}
