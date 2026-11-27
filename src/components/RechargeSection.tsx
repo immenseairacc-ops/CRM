@@ -33,6 +33,7 @@ import {
   CrmDatabase,
   OnboardingRequest,
   PaymentStatus,
+  RechargeBasis,
   RechargePaymentMode,
   RechargeRequest,
   User,
@@ -408,6 +409,7 @@ export function RechargeSection({
   const [amount, setAmount] = useState('14000');
   const [activeNumericRate, setActiveNumericRate] = useState<number>(0.14);
   const [paymentMode, setPaymentMode] = useState<RechargePaymentMode>('PREPAID');
+  const [rechargeBasis, setRechargeBasis] = useState<RechargeBasis>('ON_DELIVERY');
   const [agentNotes, setAgentNotes] = useState('');
   const [screenshotDataUrl, setScreenshotDataUrl] = useState('');
   const [screenshotName, setScreenshotName] = useState('');
@@ -512,6 +514,7 @@ export function RechargeSection({
       amount: paymentMode === 'DEMO' ? 0 : Number(amount) || 0,
       unitRate: `₹${activeNumericRate} / unit`,
       paymentMode,
+      rechargeBasis,
       // Auto-taken directly from Onboarded Client Master Data!
       billingEntity: paymentMode === 'DEMO' ? undefined : selectedAcc.billingEntity || selectedAcc.companyName,
       gstNumber:
@@ -1056,6 +1059,15 @@ export function RechargeSection({
                         >
                           {req.paymentMode || 'PREPAID'}
                         </span>
+                        {req.rechargeBasis === 'ON_SUBMISSION' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-300 flex items-center gap-1">
+                            📤 ON SUBMISSION
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                            🚚 ON DELIVERY
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-slate-500 mt-1">
                         Agent: <strong className="text-slate-800">{req.agentName}</strong> • AM:{' '}
@@ -1659,11 +1671,70 @@ export function RechargeSection({
               </div>
             </div>
 
-            {/* 3. Enter Recharge Count OR INR Value (Auto-Calculated!) */}
+            {/* 3. Recharge Commercial Model: ON DELIVERY vs ON SUBMISSION */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>3. Recharge Type / Commercial Model *</span>
+                <span className="text-[10px] text-slate-400 font-normal">Shown to Support &amp; Billing</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRechargeBasis('ON_DELIVERY')}
+                  className={`p-3 rounded-xl border text-left transition flex items-start gap-2.5 ${
+                    rechargeBasis === 'ON_DELIVERY'
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-950 ring-2 ring-emerald-500/20 shadow-xs font-bold'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="text-xl shrink-0">🚚</div>
+                  <div>
+                    <div className="text-xs font-extrabold flex items-center gap-1.5">
+                      <span>ON DELIVERY</span>
+                      {rechargeBasis === 'ON_DELIVERY' && (
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-600 text-white text-[9px] font-bold">
+                          SELECTED
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      Credits billed/deducted only on <strong>Successful Delivery (DLR Refund)</strong>.
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRechargeBasis('ON_SUBMISSION')}
+                  className={`p-3 rounded-xl border text-left transition flex items-start gap-2.5 ${
+                    rechargeBasis === 'ON_SUBMISSION'
+                      ? 'bg-blue-50 border-blue-500 text-blue-950 ring-2 ring-blue-500/20 shadow-xs font-bold'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="text-xl shrink-0">📤</div>
+                  <div>
+                    <div className="text-xs font-extrabold flex items-center gap-1.5">
+                      <span>ON SUBMISSION</span>
+                      {rechargeBasis === 'ON_SUBMISSION' && (
+                        <span className="px-1.5 py-0.2 rounded bg-blue-600 text-white text-[9px] font-bold">
+                          SELECTED
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      Credits billed/deducted on <strong>Gateway Submit (Attempt based)</strong>.
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* 4. Enter Recharge Count OR INR Value (Auto-Calculated!) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200">
               <div>
                 <label className="block text-xs font-extrabold text-indigo-950 mb-1">
-                  3. Recharge Credits / Count (Sent to Support) *
+                  4. Recharge Credits / Count (Sent to Support) *
                 </label>
                 <input
                   type="number"
@@ -1972,6 +2043,18 @@ export function RechargeSection({
                   </span>
                 </div>
                 <div>
+                  <span className="text-[10px] text-sky-700 block">Commercial Type:</span>
+                  {tallyTarget.rechargeBasis === 'ON_SUBMISSION' ? (
+                    <span className="font-extrabold text-blue-700 text-xs inline-flex items-center gap-1">
+                      📤 ON SUBMISSION
+                    </span>
+                  ) : (
+                    <span className="font-extrabold text-emerald-700 text-xs inline-flex items-center gap-1">
+                      🚚 ON DELIVERY
+                    </span>
+                  )}
+                </div>
+                <div>
                   <span className="text-[10px] text-sky-700 block">Service &amp; Rate:</span>
                   <span className="font-bold text-slate-900">
                     {tallyTarget.service} ({tallyTarget.unitRate})
@@ -2144,6 +2227,19 @@ export function RechargeSection({
                   <span className="font-extrabold text-slate-900 text-sm">
                     {supportTarget.service}
                   </span>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-amber-200/70 pb-2">
+                  <span className="text-amber-800 font-semibold">Route Type / Commercial Basis:</span>
+                  {supportTarget.rechargeBasis === 'ON_SUBMISSION' ? (
+                    <span className="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-900 border border-blue-300 font-black text-xs inline-flex items-center gap-1">
+                      📤 ON SUBMISSION (Submit Deduct Route)
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 font-black text-xs inline-flex items-center gap-1">
+                      🚚 ON DELIVERY (DLR Refund Route)
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between border-b border-amber-200/70 pb-2">

@@ -626,9 +626,20 @@ export function BillingSection({
                             <div className="text-[11px] text-slate-500">
                               {formatDateTime(item.billingCompletedAt || item.updatedAt)}
                             </div>
-                            <span className="mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
-                              {item.paymentMode || 'PREPAID'}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-1 mt-1">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                                {item.paymentMode || 'PREPAID'}
+                              </span>
+                              {item.rechargeBasis === 'ON_SUBMISSION' ? (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200">
+                                  📤 SUBMISSION
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  🚚 DELIVERY
+                                </span>
+                              )}
+                            </div>
                           </td>
 
                           <td className="py-3.5 px-4">
@@ -944,6 +955,15 @@ export function BillingSection({
                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
                       {req.paymentMode || 'PREPAID'}
                     </span>
+                    {req.rechargeBasis === 'ON_SUBMISSION' ? (
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-300">
+                        📤 ON SUBMISSION
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-300">
+                        🚚 ON DELIVERY
+                      </span>
+                    )}
                     {req.gstNumber && (
                       <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
                         GST: {req.gstNumber}
@@ -1207,11 +1227,22 @@ export function BillingSection({
                         <div className="text-[11px] text-slate-500">
                           {formatDateTime(item.billingCompletedAt || item.updatedAt)}
                         </div>
-                        {item.isExternalCampaign && (
-                          <span className="mt-1 inline-block px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
-                            EXTERNAL CAMPAIGN
-                          </span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-1 mt-1">
+                          {item.rechargeBasis === 'ON_SUBMISSION' ? (
+                            <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200">
+                              📤 SUBMISSION
+                            </span>
+                          ) : (
+                            <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              🚚 DELIVERY
+                            </span>
+                          )}
+                          {item.isExternalCampaign && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                              CAMPAIGN
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3.5 px-4">
@@ -1467,6 +1498,19 @@ export function BillingSection({
         subtitle={`Account: @${billingTarget?.username || ''} • Amount: ${formatINR(billingTarget?.amount)}`}
       >
         <form onSubmit={handlePublishBill} className="space-y-4">
+          {/* Commercial Model Indicator for Billing */}
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <span className="font-bold text-slate-700">Commercial Billing Type:</span>
+            {billingTarget?.rechargeBasis === 'ON_SUBMISSION' ? (
+              <span className="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-900 border border-blue-300 font-black inline-flex items-center gap-1">
+                📤 ON SUBMISSION (Attempt Based Billing)
+              </span>
+            ) : (
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 font-black inline-flex items-center gap-1">
+                🚚 ON DELIVERY (DLR Delivery Based Billing)
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">

@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      buildVersion: '2026-11-27-v2',
+      buildVersion: '2026-11-27-v3',
       data: sanitized,
     });
   } catch (error) {
@@ -1939,6 +1939,7 @@ export async function POST(req: NextRequest) {
         const amount = Number(payload.amount) || 0;
         const creditCount = Number(payload.creditCount) || 0;
         const paymentMode = (payload.paymentMode || 'PREPAID') as 'PREPAID' | 'POSTPAID' | 'NON_GST' | 'DEMO';
+        const rechargeBasis = (payload.rechargeBasis === 'ON_SUBMISSION' ? 'ON_SUBMISSION' : 'ON_DELIVERY') as 'ON_DELIVERY' | 'ON_SUBMISSION';
         const billingEntity = paymentMode === 'DEMO' ? undefined : String(payload.billingEntity || onb.billingEntity || onb.companyName).trim();
         const gstNumber = paymentMode === 'DEMO' || paymentMode === 'NON_GST' ? undefined : String(payload.gstNumber || onb.gstNumber || '').trim();
         const screenshotDataUrl = String(payload.screenshotDataUrl || '');
@@ -1956,9 +1957,10 @@ export async function POST(req: NextRequest) {
         const initialStatus = isExternalCampaign || paymentMode === 'DEMO' ? 'APPROVED_FOR_SUPPORT' : 'PENDING_APPROVAL';
 
         const rechargeId = makeId(isExternalCampaign ? 'cmp' : 'rec');
+        const basisLabel = rechargeBasis === 'ON_DELIVERY' ? 'ON DELIVERY' : 'ON SUBMISSION';
         const initialLogNote = isExternalCampaign
-          ? `External Campaign Requested (${String(payload.service || 'SMS/RCS/WhatsApp')}) by ${actor.name} (${actorRole}) — ${creditCount.toLocaleString('en-IN')} Volume | Dispatched DIRECTLY to Support (Account Manager & Admin in loop).`
-          : `Recharge Requested (${paymentMode}) by ${actor.name} (${actorRole}) — ${creditCount.toLocaleString('en-IN')} Credits (₹${amount.toLocaleString('en-IN')}).`;
+          ? `External Campaign Requested (${String(payload.service || 'SMS/RCS/WhatsApp')}) by ${actor.name} (${actorRole}) [${basisLabel}] — ${creditCount.toLocaleString('en-IN')} Volume | Dispatched DIRECTLY to Support (Account Manager & Admin in loop).`
+          : `Recharge Requested (${paymentMode} • ${basisLabel}) by ${actor.name} (${actorRole}) — ${creditCount.toLocaleString('en-IN')} Credits (₹${amount.toLocaleString('en-IN')}).`;
 
         const newRecharge = {
           id: rechargeId,
@@ -1972,6 +1974,7 @@ export async function POST(req: NextRequest) {
           amount,
           unitRate: String(payload.unitRate || onb.unitPrice || 'Standard Rate'),
           paymentMode,
+          rechargeBasis,
           billingEntity,
           gstNumber,
           agentId: onb.agentId || actor.id,

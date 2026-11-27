@@ -276,6 +276,8 @@ export interface OnboardingRequest {
 
 export type RechargePaymentMode = 'PREPAID' | 'POSTPAID' | 'NON_GST' | 'DEMO';
 
+export type RechargeBasis = 'ON_DELIVERY' | 'ON_SUBMISSION';
+
 export type RechargeStatus =
   | 'PENDING_APPROVAL'      // Sent to Billing for Tally Bill creation (or Legacy)
   | 'APPROVED_FOR_SUPPORT'  // Tally Bill created by Billing (or Demo direct) -> Pending Support Panel Recharge
@@ -318,6 +320,7 @@ export interface RechargeRequest {
   amount: number;             // Total INR value
   unitRate: string;
   paymentMode?: RechargePaymentMode; // PREPAID, POSTPAID, NON_GST, DEMO
+  rechargeBasis?: RechargeBasis; // ON_DELIVERY | ON_SUBMISSION
   billingEntity?: string;     // Billing Entity Name (omitted for DEMO)
   gstNumber?: string;         // 15-digit GST Number (omitted for DEMO / NON_GST)
   agentId: string;

@@ -485,6 +485,22 @@ export function OverviewSection({
           });
         });
 
+      // Support panel recharge top-ups (highlighting ON DELIVERY vs ON SUBMISSION)
+      db.rechargeRequests
+        .filter((r) => r.status === 'APPROVED_FOR_SUPPORT')
+        .forEach((r) => {
+          items.push({
+            id: `sup-rec-${r.id}`,
+            time: formatTimeOnly(r.updatedAt || r.createdAt) || 'Today',
+            title: `Panel Top-Up — @${r.username}`,
+            subtitle: `${r.service} • ${r.creditCount ? r.creditCount.toLocaleString('en-IN') + ' Credits • ' : ''}${r.rechargeBasis === 'ON_SUBMISSION' ? '📤 On Submission Route' : '🚚 On Delivery Route'}`,
+            badge: r.rechargeBasis === 'ON_SUBMISSION' ? 'On Submission' : 'On Delivery',
+            kind: 'BILLING',
+            tab: 'recharges',
+            ownerRole: 'SUPPORT',
+          });
+        });
+
       // Client Support Calls / Technical queries & Open Support Tickets
       db.leads
         .filter((l) => l.reminder && !l.reminder.completed && (l.reminder.reminderType === 'SUPPORT_CALL' || l.reminder.targetRole === 'SUPPORT' || l.status === 'HOT'))
