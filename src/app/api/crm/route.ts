@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      buildVersion: '2026-11-27-v1',
+      buildVersion: '2026-11-27-v2',
       data: sanitized,
     });
   } catch (error) {
@@ -2601,6 +2601,64 @@ export async function POST(req: NextRequest) {
         const rec = db.rechargeRequests.find((r) => r.id === payload.rechargeId);
         if (rec && rec.paymentCallbackReminder) {
           rec.paymentCallbackReminder.completed = true;
+          rec.updatedAt = now;
+          if (!rec.activityLogs) rec.activityLogs = [];
+          rec.activityLogs.push({
+            id: makeId('rlog'),
+            actorName: actor.name,
+            actorRole,
+            action: 'PAYMENT_CALLBACK_RESOLVED',
+            note: `Payment Callback marked resolved/completed by ${actor.name} (${actorRole})`,
+            createdAt: now,
+          });
+        }
+        break;
+      }
+
+      case 'SET_PAYMENT_CALLBACK': {
+        const rec = db.rechargeRequests.find((r) => r.id === payload.rechargeId);
+        if (!rec) {
+          return NextResponse.json({ ok: false, error: 'Recharge / Bill record not found.' }, { status: 404 });
+        }
+        const datetime = String(payload.datetime || '');
+        const note = String(payload.note || 'Client follow-up for outstanding payment').trim();
+        rec.paymentCallbackReminder = {
+          datetime,
+          note,
+          scheduledBy: actor.name,
+          completed: false,
+          notified: false,
+        };
+        rec.updatedAt = now;
+        if (!rec.activityLogs) rec.activityLogs = [];
+        rec.activityLogs.push({
+          id: makeId('rlog'),
+          actorName: actor.name,
+          actorRole,
+          action: 'PAYMENT_CALLBACK_SCHEDULED',
+          note: `Payment Follow-Up Callback scheduled by ${actor.name} (${actorRole}) for ${new Date(datetime).toLocaleString('en-IN')}: ${note}`,
+          createdAt: now,
+        });
+
+        // Push real-time alert to both Agent and Billing
+        pushNotification(db.notifications, {
+          targetRoles: ['BILLING', 'AGENT', 'ADMIN'],
+          targetUserIds: rec.agentId ? [rec.agentId] : undefined,
+          title: `💰 Payment Callback Set: @${rec.username}`,
+          message: `${actor.name} (${actorRole}) set payment call for ${new Date(datetime).toLocaleDateString('en-IN')}: ${note}`,
+          type: 'BILLING',
+          relatedId: rec.id,
+        });
+        break;
+      }
+
+      case 'SNOOZE_PAYMENT_CALLBACK': {
+        const rec = db.rechargeRequests.find((r) => r.id === payload.rechargeId);
+        if (rec && rec.paymentCallbackReminder) {
+          const mins = Number(payload.minutes) || 15;
+          rec.paymentCallbackReminder.datetime = new Date(Date.now() + mins * 60 * 1000).toISOString();
+          rec.paymentCallbackReminder.notified = false;
+          rec.paymentCallbackReminder.completed = false;
           rec.updatedAt = now;
         }
         break;

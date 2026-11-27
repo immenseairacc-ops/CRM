@@ -16,6 +16,7 @@ import {
   Mail,
   Menu,
   Phone,
+  MessageSquare,
   Receipt,
   RefreshCw,
   RotateCcw,
@@ -26,7 +27,7 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { CrmDatabase, Lead, User } from '@/types/crm';
+import { CrmDatabase, Lead, RechargeRequest, User } from '@/types/crm';
 import { NavTab, OverviewSection } from '@/components/OverviewSection';
 import { LeadsSection } from '@/components/LeadsSection';
 import { InboxSection } from '@/components/InboxSection';
@@ -46,6 +47,7 @@ const ErrorCodeHubSection = dynamic(
 import {
   CuteAgentAvatar,
   formatDateTime,
+  getPaymentBreakdown,
   playReminderChime,
   ROLE_META,
   RoleBadge,
@@ -78,6 +80,7 @@ export default function CrmAppPage() {
 
   // Live due reminder popup state
   const [dueAlertLead, setDueAlertLead] = useState<Lead | null>(null);
+  const [dueAlertPayment, setDueAlertPayment] = useState<RechargeRequest | null>(null);
   const alertedIdsRef = useRef<Set<string>>(new Set());
 
   const currentUser: User | undefined = useMemo(() => {
@@ -287,25 +290,34 @@ export default function CrmAppPage() {
       }
     }
 
-    // Check due Accounts Payment Follow-Up Callback Reminders for Billing / Admin / AM
-    if (
+    // Check due Accounts Payment Follow-Up Callback Reminders for Billing / Admin / AM / AGENT
+    const isPayReminderRole =
       currentUser.role === 'BILLING' ||
       currentUser.role === 'ADMIN' ||
-      currentUser.role === 'ACCOUNT_MANAGER'
-    ) {
-      const duePayBill = (db.rechargeRequests || []).find(
-        (r) =>
-          r.paymentCallbackReminder &&
-          !r.paymentCallbackReminder.completed &&
-          new Date(r.paymentCallbackReminder.datetime).getTime() <= nowMs &&
-          !alertedIdsRef.current.has(`pay:${r.id}:${r.paymentCallbackReminder.datetime}`)
-      );
+      currentUser.role === 'ACCOUNT_MANAGER' ||
+      currentUser.role === 'AGENT';
+
+    if (isPayReminderRole) {
+      const duePayBill = (db.rechargeRequests || []).find((r) => {
+        if (!r.paymentCallbackReminder || r.paymentCallbackReminder.completed) return false;
+        const isTimeDue = new Date(r.paymentCallbackReminder.datetime).getTime() <= nowMs;
+        if (!isTimeDue) return false;
+        if (alertedIdsRef.current.has(`pay:${r.id}:${r.paymentCallbackReminder.datetime}`)) return false;
+        // For Agent role, only alert for the agent's assigned clients
+        if (currentUser.role === 'AGENT') {
+          return r.agentId === currentUser.id || r.agentName?.toLowerCase() === currentUser.name?.toLowerCase();
+        }
+        return true;
+      });
+
       if (duePayBill && duePayBill.paymentCallbackReminder) {
         alertedIdsRef.current.add(`pay:${duePayBill.id}:${duePayBill.paymentCallbackReminder.datetime}`);
+        setDueAlertPayment(duePayBill);
         playReminderChime();
+        const br = getPaymentBreakdown(duePayBill);
         showToast(
           'success',
-          `⏰ ACCOUNTS CALL REMINDER DUE: Call ${duePayBill.billingEntity || duePayBill.companyName} (${duePayBill.clientPhone || '@'+duePayBill.username}) for Bill #${duePayBill.billingInvoiceNumber || 'Pending'}`
+          `💰 OUTSTANDING REMINDER: Call ${duePayBill.companyName} (${duePayBill.clientPhone || '@' + duePayBill.username}) — Balance: ₹${br.balance.toLocaleString('en-IN')}. Remark: ${duePayBill.paymentCallbackReminder.note}`
         );
       }
     }
@@ -362,12 +374,33 @@ export default function CrmAppPage() {
     (n) => !n.readBy.includes(currentUser.id)
   ).length;
 
-  const dueRemindersCount = db.leads.filter(
-    (l) =>
-      l.reminder &&
-      !l.reminder.completed &&
-      new Date(l.reminder.datetime).getTime() <= Date.now()
-  ).length;
+  const dueRemindersCount = useMemo(() => {
+    if (!db || !currentUser) return 0;
+    const now = Date.now();
+    const leadReminders = db.leads.filter(
+      (l) =>
+        l.reminder &&
+        !l.reminder.completed &&
+        new Date(l.reminder.datetime).getTime() <= now &&
+        (currentUser.role !== 'AGENT' || !l.assignedToAgentId || l.assignedToAgentId === currentUser.id)
+    ).length;
+
+    const paymentReminders = (db.rechargeRequests || []).filter((r) => {
+      if (!r.paymentCallbackReminder || r.paymentCallbackReminder.completed) return false;
+      const isDue = new Date(r.paymentCallbackReminder.datetime).getTime() <= now;
+      if (!isDue) return false;
+      if (currentUser.role === 'AGENT') {
+        return r.agentId === currentUser.id || r.agentName?.toLowerCase() === currentUser.name?.toLowerCase();
+      }
+      return (
+        currentUser.role === 'BILLING' ||
+        currentUser.role === 'ADMIN' ||
+        currentUser.role === 'ACCOUNT_MANAGER'
+      );
+    }).length;
+
+    return leadReminders + paymentReminders;
+  }, [db, currentUser]);
 
   const allNavItems: Array<{
     id: NavTab;
@@ -874,6 +907,93 @@ export default function CrmAppPage() {
               <button
                 onClick={() => setDueAlertLead(null)}
                 className="p-1.5 rounded-lg hover:bg-black/10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Due Outstanding Payment Follow-Up Reminder Urgent Banner for Agent, Billing & Admin */}
+        {dueAlertPayment && dueAlertPayment.paymentCallbackReminder && (
+          <div className="mx-4 lg:mx-6 mt-4 p-4 rounded-2xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-3 border border-rose-400/40 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-white/20 animate-pulse text-amber-200 shrink-0">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-black uppercase tracking-wider text-amber-200 flex flex-wrap items-center gap-1.5">
+                  <span>💰 Outstanding Payment Follow-Up Due!</span>
+                  <span className="px-2 py-0.5 rounded-full bg-white/25 text-white text-[10px] font-bold">
+                    Bill #{dueAlertPayment.billingInvoiceNumber || 'Pending'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-black/30 text-amber-300 text-[10px] font-bold">
+                    Due: ₹{getPaymentBreakdown(dueAlertPayment).balance.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="text-sm font-bold text-white mt-0.5">
+                  {dueAlertPayment.companyName} (@{dueAlertPayment.username})
+                  {dueAlertPayment.clientPhone ? ` — 📞 ${dueAlertPayment.clientPhone}` : ''}
+                </div>
+                <p className="text-xs font-medium text-white/95 mt-0.5">
+                  <strong>Remark:</strong> {dueAlertPayment.paymentCallbackReminder.note}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {dueAlertPayment.clientPhone && (
+                <>
+                  <a
+                    href={`tel:${dueAlertPayment.clientPhone}`}
+                    className="px-3 py-1.5 rounded-xl bg-white text-rose-700 hover:bg-slate-100 text-xs font-bold flex items-center gap-1 shadow-sm transition"
+                  >
+                    <Phone className="w-3.5 h-3.5" /> Call Client
+                  </a>
+                  <a
+                    href={`https://wa.me/${dueAlertPayment.clientPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                      `Hello ${dueAlertPayment.companyName}, this is regarding the outstanding payment of ₹${getPaymentBreakdown(
+                        dueAlertPayment
+                      ).balance.toLocaleString('en-IN')} for invoice #${
+                        dueAlertPayment.billingInvoiceNumber || dueAlertPayment.id
+                      } with Immense Air Pvt Ltd. Kindly share the payment update.`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" /> WhatsApp
+                  </a>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleAction('SNOOZE_PAYMENT_CALLBACK', {
+                    rechargeId: dueAlertPayment.id,
+                    minutes: 15,
+                  });
+                  setDueAlertPayment(null);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-semibold transition"
+              >
+                Snooze 15m
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleAction('COMPLETE_PAYMENT_CALLBACK_REMINDER', {
+                    rechargeId: dueAlertPayment.id,
+                  });
+                  setDueAlertPayment(null);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" /> Mark Done
+              </button>
+              <button
+                type="button"
+                onClick={() => setDueAlertPayment(null)}
+                className="p-1.5 rounded-lg hover:bg-black/20 text-white"
               >
                 <X className="w-4 h-4" />
               </button>

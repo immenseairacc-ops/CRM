@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRight, Check, CheckCircle2, Clock, Headphones, Mail, MailOpen, Plus } from 'lucide-react';
 import errorsData from '@/data/errors.json';
 import { CrmDatabase, Role, User } from '@/types/crm';
-import { formatINR, ROLE_META, StatusBadge } from './ui';
+import { formatINR, getPaymentBreakdown, ROLE_META, StatusBadge } from './ui';
 import { AgentAnalyticsSection } from './AgentAnalyticsSection';
 import { AdminLatencyRadarSection } from './AdminLatencyRadarSection';
 
@@ -726,6 +726,52 @@ export function OverviewSection({
             badge: isSiteVisit ? 'Site Visit' : isQuote ? 'Quotation Follow-up' : 'Call Client',
             kind: isSiteVisit ? 'VISIT' : 'REMINDER',
             tab: 'reminders',
+          });
+        });
+
+      // Agent's client outstanding payment recovery follow-ups & callback reminders
+      (db.rechargeRequests || [])
+        .filter((r) => {
+          const isMyClient =
+            r.agentId === currentUser.id ||
+            r.agentName?.toLowerCase() === currentUser.name?.toLowerCase();
+          if (!isMyClient) return false;
+          const br = getPaymentBreakdown(r);
+          const hasActiveCallback =
+            r.paymentCallbackReminder && !r.paymentCallbackReminder.completed;
+          return hasActiveCallback || (r.status === 'BILLED' && br.balance > 0);
+        })
+        .forEach((r) => {
+          const br = getPaymentBreakdown(r);
+          const hasCallback =
+            r.paymentCallbackReminder && !r.paymentCallbackReminder.completed;
+          const isDue =
+            hasCallback &&
+            new Date(r.paymentCallbackReminder!.datetime).getTime() <= Date.now();
+          const callbackTime = hasCallback
+            ? formatTimeOnly(r.paymentCallbackReminder!.datetime)
+            : 'Today';
+
+          items.push({
+            id: `agent-out-${r.id}`,
+            time: callbackTime,
+            title: `💰 Outstanding Payment — ${r.companyName}`,
+            subtitle: `Balance Due: ₹${br.balance.toLocaleString(
+              'en-IN'
+            )} (Bill #${r.billingInvoiceNumber || 'Pending'})${
+              hasCallback
+                ? ` • Remark: ${r.paymentCallbackReminder!.note}`
+                : ' • Call client to collect overdue payment'
+            }`,
+            badge: isDue
+              ? 'Payment Due Now'
+              : br.balance > 0
+              ? 'Payment Recovery'
+              : 'Payment Call',
+            kind: 'REMINDER',
+            tab: 'reminders',
+            ownerRole: 'AGENT',
+            ownerName: r.agentName,
           });
         });
     }

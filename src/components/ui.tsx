@@ -365,3 +365,29 @@ export function CuteAgentAvatar({ size = 36 }: { size?: number }) {
     </div>
   );
 }
+
+export function getPaymentBreakdown(item: {
+  amount?: number;
+  billingPaymentStatus?: string;
+  paymentMode?: string;
+  paidAmount?: number;
+  balanceAmount?: number;
+}) {
+  const total = Number(item.amount || 0);
+  const status =
+    item.billingPaymentStatus || (item.paymentMode === 'POSTPAID' ? 'PENDING' : 'PAID');
+  const paid =
+    item.paidAmount !== undefined
+      ? Number(item.paidAmount)
+      : status === 'PAID'
+      ? total
+      : status === 'PENDING'
+      ? 0
+      : Math.round(total / 2);
+  const balance =
+    item.balanceAmount !== undefined
+      ? Number(item.balanceAmount)
+      : Math.max(0, total - paid);
+  return { total, paid, balance, status };
+}
+
