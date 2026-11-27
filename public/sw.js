@@ -1,5 +1,5 @@
-// Immense Air CRM Service Worker
-const CACHE_NAME = 'immense-crm-v1';
+// Immense Air CRM Service Worker with Mobile Phone Push & Notification Support
+const CACHE_NAME = 'immense-crm-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -57,4 +57,61 @@ self.addEventListener('fetch', (event) => {
         return caches.match(event.request);
       })
   );
+});
+
+// Handle phone notification clicks (When agent/admin taps notification banner on mobile)
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If CRM is already open, focus it
+      for (const client of clientList) {
+        if (client.url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+
+// Handle incoming background push message
+self.addEventListener('push', (event) => {
+  let data = {
+    title: 'Immense Air CRM Alert',
+    body: 'You have a new update in your CRM.',
+    url: '/',
+    tag: 'crm-push',
+  };
+
+  if (event.data) {
+    try {
+      data = Object.assign(data, event.data.json());
+    } catch {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    vibrate: [300, 100, 300, 100, 300],
+    tag: data.tag || 'immense-crm-alert',
+    renotify: true,
+    data: {
+      url: data.url || '/',
+      dateOfArrival: Date.now(),
+    },
+    actions: [
+      { action: 'open', title: 'Open CRM' }
+    ]
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });

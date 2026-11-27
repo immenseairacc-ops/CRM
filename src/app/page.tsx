@@ -33,6 +33,11 @@ import {
 import { BackupLogsModal } from '@/components/BackupLogsModal';
 import { QuotationsSection } from '@/components/QuotationsSection';
 import { CrmDatabase, Lead, RechargeRequest, User } from '@/types/crm';
+import {
+  getNotificationPermissionStatus,
+  requestPhoneNotificationPermission,
+  sendPhoneNotification,
+} from '@/lib/phoneNotifications';
 import { NavTab, OverviewSection } from '@/components/OverviewSection';
 import { LeadsSection } from '@/components/LeadsSection';
 import { InboxSection } from '@/components/InboxSection';
@@ -78,6 +83,9 @@ export default function CrmAppPage() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showIosGuide, setShowIosGuide] = useState(false);
+  const [phoneNotifStatus, setPhoneNotifStatus] = useState<NotificationPermission | 'unsupported'>('default');
+  const [phoneBannerDismissed, setPhoneBannerDismissed] = useState<boolean>(false);
+  const notifiedNotifsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -332,16 +340,69 @@ export default function CrmAppPage() {
     }
   };
 
-  // Poll every 12 seconds (only when tab is visible) for smooth performance
+  // Continuous background polling so phone gets leads & alerts even when in pocket/background
   useEffect(() => {
     const timer = setInterval(() => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
-        return;
-      }
       fetchState();
-    }, 12000);
+    }, 15000);
     return () => clearInterval(timer);
   }, [fetchState]);
+
+  // Check initial notification permission on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setPhoneNotifStatus(getNotificationPermissionStatus());
+    }
+  }, []);
+
+  // Listen for new incoming database notifications and send system push alert to mobile phone
+  useEffect(() => {
+    if (!db || !currentUser) return;
+
+    // Initialize with existing notifications on first boot so we don't spam 15 old notifications
+    if (notifiedNotifsRef.current.size === 0 && db.notifications?.length > 0) {
+      db.notifications.forEach((n) => notifiedNotifsRef.current.add(n.id));
+      return;
+    }
+
+    const unnotified = (db.notifications || []).filter((n) => {
+      const isForMe =
+        (n.targetRoles && n.targetRoles.includes(currentUser.role)) ||
+        (n.targetUserIds && n.targetUserIds.includes(currentUser.id));
+      const isUnread = !(n.readBy || []).includes(currentUser.id);
+      return isForMe && isUnread && !notifiedNotifsRef.current.has(n.id);
+    });
+
+    for (const notif of unnotified) {
+      notifiedNotifsRef.current.add(notif.id);
+      sendPhoneNotification({
+        title: notif.title || '📲 Immense CRM Alert',
+        body: notif.message,
+        tag: `crm-notif-${notif.id}`,
+        url: '/',
+      });
+    }
+  }, [db, currentUser]);
+
+  const handleEnablePhoneNotifications = async () => {
+    const granted = await requestPhoneNotificationPermission();
+    setPhoneNotifStatus(granted ? 'granted' : 'denied');
+    if (granted) {
+      showToast('success', '🔔 Phone notifications enabled! All CRM alerts will arrive on this phone.');
+    } else {
+      showToast('error', 'Notification permission was denied. Please allow notifications in your phone browser settings.');
+    }
+  };
+
+  const handleTestPhoneNotification = async () => {
+    await sendPhoneNotification({
+      title: '📲 Immense Air CRM Test Alert',
+      body: 'Notifications, sound & vibration are working smoothly on this phone!',
+      tag: `test-${Date.now()}`,
+      url: '/',
+    });
+    showToast('success', 'Test alert sent to phone with sound & vibration!');
+  };
 
   useEffect(() => {
     if (!db || !currentUser) return;
@@ -358,6 +419,12 @@ export default function CrmAppPage() {
       alertedIdsRef.current.add(`${dueLead.id}:${dueLead.reminder.datetime}`);
       setDueAlertLead(dueLead);
       playReminderChime();
+      sendPhoneNotification({
+        title: `🔔 Callback Reminder: ${dueLead.companyName}`,
+        body: `Call ${dueLead.clientName || dueLead.phone} now. Note: ${dueLead.reminder.note || 'Scheduled follow-up'}`,
+        tag: `lead-reminder-${dueLead.id}-${dueLead.reminder.datetime}`,
+        url: '/',
+      });
       if (!dueLead.reminder.notified) {
         handleAction('MARK_REMINDER_NOTIFIED', { leadId: dueLead.id });
       }
@@ -388,6 +455,12 @@ export default function CrmAppPage() {
         setDueAlertPayment(duePayBill);
         playReminderChime();
         const br = getPaymentBreakdown(duePayBill);
+        sendPhoneNotification({
+          title: `💰 Payment Callback: ${duePayBill.companyName}`,
+          body: `Call ${duePayBill.clientPhone || '@' + duePayBill.username}. Balance: ₹${br.balance.toLocaleString('en-IN')}. Remark: ${duePayBill.paymentCallbackReminder.note}`,
+          tag: `pay-reminder-${duePayBill.id}-${duePayBill.paymentCallbackReminder.datetime}`,
+          url: '/',
+        });
         showToast(
           'success',
           `💰 OUTSTANDING REMINDER: Call ${duePayBill.companyName} (${duePayBill.clientPhone || '@' + duePayBill.username}) — Balance: ₹${br.balance.toLocaleString('en-IN')}. Remark: ${duePayBill.paymentCallbackReminder.note}`
@@ -871,6 +944,21 @@ export default function CrmAppPage() {
                         })
                       )}
                     </div>
+                    {/* Phone Notification Action Bar */}
+                    <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
+                      <button
+                        type="button"
+                        onClick={phoneNotifStatus === 'granted' ? handleTestPhoneNotification : handleEnablePhoneNotifications}
+                        className="w-full py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-2xs"
+                      >
+                        <BellRing className="w-3.5 h-3.5" />
+                        <span>
+                          {phoneNotifStatus === 'granted'
+                            ? '📲 Send Test Alert to Phone (Sound & Vibrate)'
+                            : '🔔 Enable Phone Alerts on Mobile'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -896,6 +984,22 @@ export default function CrmAppPage() {
               </button>
             )}
 
+            {/* Mobile Phone Push Alerts Button */}
+            <button
+              onClick={phoneNotifStatus === 'granted' ? handleTestPhoneNotification : handleEnablePhoneNotifications}
+              title={phoneNotifStatus === 'granted' ? 'Phone alerts active (Click to test vibration & sound)' : 'Enable phone push alerts'}
+              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition shadow-2xs ${
+                phoneNotifStatus === 'granted'
+                  ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                  : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 animate-pulse'
+              }`}
+            >
+              <BellRing className={`w-3.5 h-3.5 ${phoneNotifStatus === 'granted' ? 'text-blue-600' : 'text-amber-600'}`} />
+              <span className="hidden md:inline">
+                {phoneNotifStatus === 'granted' ? 'Phone Alerts ON' : 'Enable Phone Alerts'}
+              </span>
+            </button>
+
             {currentUser?.role === 'ADMIN' && (
               <button
                 onClick={() => setBackupLogsOpen(true)}
@@ -908,6 +1012,43 @@ export default function CrmAppPage() {
             )}
           </div>
         </header>
+
+        {/* Enable Phone Notifications Mobile Top Banner */}
+        {phoneNotifStatus !== 'granted' && !phoneBannerDismissed && (
+          <div className="mx-4 lg:mx-6 mt-3 p-3.5 rounded-2xl bg-gradient-to-r from-[#0A1B3F] via-[#1E3A8A] to-[#F2591F] text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center shrink-0 shadow-inner">
+                <BellRing className="w-5 h-5 text-amber-300 animate-bounce" />
+              </div>
+              <div>
+                <p className="text-xs font-black tracking-wide flex items-center gap-2">
+                  <span>Receive All CRM Alerts on Your Phone</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-400 text-slate-950 font-extrabold uppercase">
+                    Important
+                  </span>
+                </p>
+                <p className="text-[11px] text-slate-200 mt-0.5">
+                  Get instant mobile vibrations & lock-screen notifications for new leads, callback reminders & recharges.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              <button
+                onClick={handleEnablePhoneNotifications}
+                className="px-4 py-2 rounded-xl bg-white text-slate-900 font-extrabold text-xs shadow-md hover:bg-amber-50 transition active:scale-95"
+              >
+                Allow on This Phone
+              </button>
+              <button
+                onClick={() => setPhoneBannerDismissed(true)}
+                title="Dismiss"
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition text-xs"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Due Reminder Urgent Banner */}
         {dueAlertLead && dueAlertLead.reminder && (
