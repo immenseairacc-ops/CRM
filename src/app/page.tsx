@@ -26,7 +26,9 @@ import {
   Users,
   Wallet,
   X,
+  Database,
 } from 'lucide-react';
+import { BackupLogsModal } from '@/components/BackupLogsModal';
 import { CrmDatabase, Lead, RechargeRequest, User } from '@/types/crm';
 import { NavTab, OverviewSection } from '@/components/OverviewSection';
 import { LeadsSection } from '@/components/LeadsSection';
@@ -69,6 +71,7 @@ export default function CrmAppPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
+  const [backupLogsOpen, setBackupLogsOpen] = useState(false);
 
   const [prefillOnboardLead, setPrefillOnboardLead] = useState<Lead | null>(
     null
@@ -831,21 +834,16 @@ export default function CrmAppPage() {
               <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} />
             </button>
 
-            <button
-              onClick={() => {
-                if (
-                  window.confirm(
-                    'Reset all CRM data back to the clean initial demo dataset?'
-                  )
-                ) {
-                  handleAction('RESET_DEMO_DATA');
-                }
-              }}
-              title="Reset Demo Dataset"
-              className="p-2 rounded-xl border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-500"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
+            {currentUser?.role === 'ADMIN' && (
+              <button
+                onClick={() => setBackupLogsOpen(true)}
+                title="Admin Backup & Audit Logs"
+                className="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
+              >
+                <Database className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Backup & Logs</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -1140,6 +1138,17 @@ export default function CrmAppPage() {
           <span className="text-[10px] font-bold mt-0.5">More</span>
         </button>
       </nav>
+
+      {/* Admin Backup & Activity Logs Modal */}
+      {backupLogsOpen && currentUser && (
+        <BackupLogsModal
+          db={db}
+          currentUser={currentUser}
+          onClose={() => setBackupLogsOpen(false)}
+          onAction={handleAction}
+          showToast={showToast}
+        />
+      )}
 
       {/* Toast Notification */}
       {toast && (

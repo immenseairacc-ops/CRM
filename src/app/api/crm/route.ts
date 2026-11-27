@@ -7,7 +7,9 @@ import {
   writeDatabaseAsync,
 } from '@/lib/db';
 import {
+  ActivityLogItem,
   BillingType,
+  CrmDatabase,
   Lead,
   LeadQuotation,
   LeadStatus,
@@ -39,6 +41,29 @@ function pushNotification(
     createdAt: new Date().toISOString(),
     readBy: [],
   });
+}
+
+function logActivity(
+  db: CrmDatabase,
+  actor: { id: string; name: string; role: Role },
+  actionName: string,
+  module: ActivityLogItem['module'],
+  details: string
+): void {
+  if (!db.activityLogs) db.activityLogs = [];
+  db.activityLogs.unshift({
+    id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    actorId: actor.id,
+    actorName: actor.name,
+    actorRole: actor.role,
+    action: actionName,
+    module,
+    details,
+    timestamp: new Date().toISOString(),
+  });
+  if (db.activityLogs.length > 800) {
+    db.activityLogs = db.activityLogs.slice(0, 800);
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -205,6 +230,13 @@ export async function POST(req: NextRequest) {
             : `${actor.name} uploaded ${createdLeads.length} lead(s) ready for distribution.`,
           type: 'LEAD',
         });
+        logActivity(
+          db,
+          actor,
+          'UPLOAD_LEADS',
+          'LEADS',
+          `${actor.name} uploaded ${createdLeads.length} lead(s) (${uploadSourceLabel}).`
+        );
         break;
       }
 
@@ -982,6 +1014,13 @@ export async function POST(req: NextRequest) {
           type: 'MEET',
           relatedId: meetId,
         });
+        logActivity(
+          db,
+          actor,
+          'CREATE_MEET',
+          'MEETS',
+          `${actor.name} scheduled ${meet.platform} demo meet with ${meet.companyName} (${meet.scheduledDate} ${meet.scheduledTime}).`
+        );
         break;
       }
 
@@ -1035,6 +1074,13 @@ export async function POST(req: NextRequest) {
           type: 'MEET',
           relatedId: meet.id,
         });
+        logActivity(
+          db,
+          actor,
+          'APPROVE_MEET',
+          'MEETS',
+          `${actor.name} approved and locked in meet for ${meet.companyName} (${meet.scheduledDate} ${meet.scheduledTime}).`
+        );
         break;
       }
 
@@ -1314,6 +1360,13 @@ export async function POST(req: NextRequest) {
           type: 'ONBOARDING',
           relatedId: onboardingId,
         });
+        logActivity(
+          db,
+          actor,
+          'CREATE_ONBOARDING',
+          'ONBOARDING',
+          `${actor.name} submitted onboarding request for ${username} (${companyName}, ₹${totalDealAmount.toLocaleString('en-IN')}).`
+        );
         break;
       }
 
@@ -1352,6 +1405,13 @@ export async function POST(req: NextRequest) {
           type: 'ONBOARDING',
           relatedId: onb.id,
         });
+        logActivity(
+          db,
+          actor,
+          'APPROVE_ONBOARDING',
+          'ONBOARDING',
+          `${actor.name} approved onboarding for ${onb.username} (${onb.companyName}) -> routed to Support.`
+        );
         break;
       }
 
@@ -2043,6 +2103,13 @@ export async function POST(req: NextRequest) {
             relatedId: rechargeId,
           });
         }
+        logActivity(
+          db,
+          actor,
+          'CREATE_RECHARGE',
+          'RECHARGE',
+          `${actor.name} raised recharge request for @${onb.username} (₹${amount.toLocaleString('en-IN')}, ${paymentMode}, ${newRecharge.service}).`
+        );
         break;
       }
 
@@ -2597,6 +2664,13 @@ export async function POST(req: NextRequest) {
           type: 'BILLING',
           relatedId: rec.id,
         });
+        logActivity(
+          db,
+          actor,
+          'UPDATE_PAYMENT',
+          'BILLING',
+          `${actor.name} updated payment ledger for @${rec.username}: ${paymentStatus} (Paid: ₹${paidAmount.toLocaleString('en-IN')}, Bal: ₹${balanceAmount.toLocaleString('en-IN')}).`
+        );
         break;
       }
 
@@ -2855,8 +2929,65 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case 'RESTORE_DATABASE_BACKUP': {
+        if (actorRole !== 'ADMIN') {
+          return NextResponse.json(
+            { ok: false, error: 'Only Admin can restore database backups.' },
+            { status: 403 }
+          );
+        }
+        const backup = payload.backupData as CrmDatabase;
+        if (!backup || !Array.isArray(backup.users) || !Array.isArray(backup.leads)) {
+          return NextResponse.json(
+            { ok: false, error: 'Invalid backup file format.' },
+            { status: 400 }
+          );
+        }
+
+        const restoredDb: CrmDatabase = {
+          ...backup,
+          activityLogs: [
+            {
+              id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              actorId: actor.id,
+              actorName: actor.name,
+              actorRole: actor.role,
+              action: 'RESTORE_DATABASE_BACKUP',
+              module: 'BACKUP',
+              details: `Restored full database backup (${backup.leads?.length || 0} leads, ${backup.rechargeRequests?.length || 0} recharges, ${backup.onboardingRequests?.length || 0} onboarding accounts).`,
+              timestamp: new Date().toISOString(),
+            },
+            ...(backup.activityLogs || []),
+          ],
+        };
+
+        await writeDatabaseAsync(restoredDb);
+        return NextResponse.json({
+          ok: true,
+          data: sanitizeForRole(restoredDb, actorRole, actor.id),
+        });
+      }
+
       case 'RESET_DEMO_DATA': {
+        if (actorRole !== 'ADMIN' || payload.confirmPasscode !== 'IMMENSE_ADMIN_RESET_2026') {
+          return NextResponse.json(
+            { ok: false, error: 'Accidental reset blocked. Master confirmation passcode required.' },
+            { status: 403 }
+          );
+        }
         const fresh = createSeedDatabase();
+        fresh.activityLogs = [
+          {
+            id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            actorId: actor.id,
+            actorName: actor.name,
+            actorRole: actor.role,
+            action: 'RESET_DATA',
+            module: 'SYSTEM',
+            details: 'System database reset to initial seed state by Admin with passcode.',
+            timestamp: new Date().toISOString(),
+          },
+        ];
         await writeDatabaseAsync(fresh);
         return NextResponse.json({
           ok: true,

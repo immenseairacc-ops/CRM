@@ -554,6 +554,7 @@ export function createSeedDatabase(): CrmDatabase {
     meetRequests,
     onboardingRequests,
     rechargeRequests,
+    activityLogs: [],
     notifications,
   };
 }
@@ -775,6 +776,7 @@ export function sanitizeForRole(
       onboardingRequests: onb,
       rechargeRequests: enrichRechargeContact(db.rechargeRequests, onb),
       supportTickets: db.supportTickets || [],
+      activityLogs: db.activityLogs || [],
       notifications: filterNotifications(db.notifications),
     };
   }
@@ -801,6 +803,9 @@ export function sanitizeForRole(
       rechargeRequests: teamRecharges,
       supportTickets: (db.supportTickets || []).filter((t) =>
         belongsToMyTeam(t.teamId, t.agentId || t.fromUserId)
+      ),
+      activityLogs: (db.activityLogs || []).filter((l) =>
+        belongsToMyTeam(undefined, l.actorId)
       ),
       notifications: filterNotifications(db.notifications),
     };

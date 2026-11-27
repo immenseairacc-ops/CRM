@@ -436,6 +436,27 @@ export interface PersonalReminder {
   createdAt: string;
 }
 
+export interface ActivityLogItem {
+  id: string;
+  actorId: string;
+  actorName: string;
+  actorRole: Role;
+  action: string;
+  module:
+    | 'LEADS'
+    | 'MEETS'
+    | 'ONBOARDING'
+    | 'SUPPORT'
+    | 'BILLING'
+    | 'RECHARGE'
+    | 'RECHARGES'
+    | 'TEAMS'
+    | 'BACKUP'
+    | 'SYSTEM';
+  details: string;
+  timestamp: string;
+}
+
 export interface CrmDatabase {
   teams?: Team[];
   users: User[];
@@ -445,5 +466,6 @@ export interface CrmDatabase {
   rechargeRequests: RechargeRequest[];
   supportTickets?: SupportTicket[];
   personalReminders?: PersonalReminder[];
+  activityLogs?: ActivityLogItem[];
   notifications: NotificationItem[];
 }
