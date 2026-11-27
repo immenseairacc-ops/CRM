@@ -6,6 +6,7 @@ import errorsData from '@/data/errors.json';
 import { CrmDatabase, Role, User } from '@/types/crm';
 import { formatINR, ROLE_META, StatusBadge } from './ui';
 import { AgentAnalyticsSection } from './AgentAnalyticsSection';
+import { AdminLatencyRadarSection } from './AdminLatencyRadarSection';
 
 export type NavTab =
   | 'overview'
@@ -1756,6 +1757,11 @@ export function OverviewSection({
           </div>
         </div>
       </div>
+      )}
+
+      {/* Admin Operations SLA & Work Latency Monitor (Zero-Delay Radar) */}
+      {currentUser.role === 'ADMIN' && (
+        <AdminLatencyRadarSection db={db} currentUser={currentUser} onNavigate={onNavigate} />
       )}
 
       {/* Visual Analytics & Review Pie Chart (Day/Week/Custom) for Admin & Account Manager */}
