@@ -9,6 +9,8 @@ import {
 import {
   ActivityLogItem,
   BillingType,
+  ChatAttachment,
+  ChatMessage,
   CrmDatabase,
   Lead,
   LeadQuotation,
@@ -2966,6 +2968,81 @@ export async function POST(req: NextRequest) {
           ok: true,
           data: sanitizeForRole(restoredDb, actorRole, actor.id),
         });
+      }
+
+      case 'SEND_CHAT_MESSAGE': {
+        const text = String(payload.text || '').trim();
+        const attachments = Array.isArray(payload.attachments) ? (payload.attachments as ChatAttachment[]) : [];
+        if (!text && attachments.length === 0) {
+          return NextResponse.json(
+            { ok: false, error: 'Message cannot be empty.' },
+            { status: 400 }
+          );
+        }
+
+        const newMsg: ChatMessage = {
+          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          senderId: actor.id,
+          senderName: actor.name,
+          senderRole: actor.role,
+          senderAvatar: actor.avatar,
+          receiverId: payload.receiverId ? String(payload.receiverId) : undefined,
+          channelId: payload.channelId ? String(payload.channelId) : undefined,
+          text,
+          attachments: attachments.length > 0 ? attachments : undefined,
+          linkedLeadId: payload.linkedLeadId ? String(payload.linkedLeadId) : undefined,
+          linkedLeadName: payload.linkedLeadName ? String(payload.linkedLeadName) : undefined,
+          createdAt: now,
+          readBy: [actor.id],
+        };
+
+        if (!db.chatMessages) db.chatMessages = [];
+        db.chatMessages.push(newMsg);
+
+        // Notify recipient or group channel
+        if (newMsg.receiverId) {
+          const targetUser = db.users.find((u) => u.id === newMsg.receiverId);
+          if (targetUser) {
+            pushNotification(db.notifications, {
+              targetRoles: [targetUser.role],
+              targetUserIds: [targetUser.id],
+              title: `💬 ${actor.name} (${actor.role})`,
+              message: text || (attachments.length > 0 ? `Sent ${attachments.length} attachment(s)` : 'New message'),
+              type: 'CHAT',
+              relatedId: newMsg.id,
+              linkTab: 'chat',
+            });
+          }
+        } else if (newMsg.channelId) {
+          pushNotification(db.notifications, {
+            targetRoles: ['ADMIN', 'ACCOUNT_MANAGER', 'AGENT', 'SUPPORT', 'BILLING'],
+            title: `💬 #${newMsg.channelId}: ${actor.name}`,
+            message: text || (attachments.length > 0 ? `Sent ${attachments.length} attachment(s)` : 'New message'),
+            type: 'CHAT',
+            relatedId: newMsg.id,
+            linkTab: 'chat',
+          });
+        }
+        break;
+      }
+
+      case 'MARK_CHAT_MESSAGES_READ': {
+        if (!db.chatMessages) break;
+        const targetChannel = payload.channelId ? String(payload.channelId) : undefined;
+        const targetSenderId = payload.senderId ? String(payload.senderId) : undefined;
+
+        for (const msg of db.chatMessages) {
+          if (targetChannel && msg.channelId === targetChannel) {
+            if (!msg.readBy.includes(actor.id)) {
+              msg.readBy.push(actor.id);
+            }
+          } else if (targetSenderId && msg.senderId === targetSenderId && msg.receiverId === actor.id) {
+            if (!msg.readBy.includes(actor.id)) {
+              msg.readBy.push(actor.id);
+            }
+          }
+        }
+        break;
       }
 
       case 'RESET_DEMO_DATA': {

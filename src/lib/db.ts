@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import {
+  ChatMessage,
   CrmDatabase,
   Lead,
   MeetRequest,
@@ -556,6 +557,41 @@ export function createSeedDatabase(): CrmDatabase {
     rechargeRequests,
     activityLogs: [],
     notifications,
+    chatMessages: [
+      {
+        id: 'msg-1',
+        senderId: 'usr-support-1',
+        senderName: 'Neha Verma',
+        senderRole: 'SUPPORT',
+        senderAvatar: 'NV',
+        channelId: 'support-escalations',
+        text: 'Good morning team! DLT Airtel & Jio OTP routes are running at 99.8% delivery uptime today.',
+        createdAt: iso(-180),
+        readBy: ['usr-support-1', 'usr-admin-1', 'usr-agent-1'],
+      },
+      {
+        id: 'msg-2',
+        senderId: 'usr-billing-1',
+        senderName: 'Sunita Rao',
+        senderRole: 'BILLING',
+        senderAvatar: 'SR',
+        receiverId: 'usr-agent-1',
+        text: 'Hi Rahul! For FinEdge Capital recharge (Req #102), please share the updated payment screenshot or UTR number so we can approve credit.',
+        createdAt: iso(-90),
+        readBy: ['usr-billing-1'],
+      },
+      {
+        id: 'msg-3',
+        senderId: 'usr-admin-1',
+        senderName: 'Vikram Mehta',
+        senderRole: 'ADMIN',
+        senderAvatar: 'VM',
+        channelId: 'all-announcements',
+        text: 'Team, our new Quotation Manager with dedicated OTP SMS and dual-tone footers is now live in CRM! All proposals should be exported from the Quotation App tab.',
+        createdAt: iso(-60),
+        readBy: ['usr-admin-1'],
+      },
+    ],
   };
 }
 
@@ -731,6 +767,16 @@ export function sanitizeForRole(
         (role === 'ADMIN' || !userTeamId || !n.teamId || n.teamId === userTeamId)
     );
 
+  const filterChatMessages = (messages: ChatMessage[]) =>
+    (messages || []).filter((m) => {
+      // Group channels are public to the team
+      if (m.channelId) return true;
+      // Admin can monitor all chat communications
+      if (role === 'ADMIN') return true;
+      // 1-on-1 direct messages are strictly private between sender & receiver
+      return m.senderId === userId || m.receiverId === userId;
+    });
+
   const enrichOnboardingContact = (list: OnboardingRequest[]) =>
     list.map((o) => {
       if (o.clientPhone && o.clientEmail) return o;
@@ -778,6 +824,7 @@ export function sanitizeForRole(
       supportTickets: db.supportTickets || [],
       activityLogs: db.activityLogs || [],
       notifications: filterNotifications(db.notifications),
+      chatMessages: filterChatMessages(db.chatMessages || []),
     };
   }
 
@@ -808,6 +855,7 @@ export function sanitizeForRole(
         belongsToMyTeam(undefined, l.actorId)
       ),
       notifications: filterNotifications(db.notifications),
+      chatMessages: filterChatMessages(db.chatMessages || []),
     };
   }
 
@@ -835,6 +883,7 @@ export function sanitizeForRole(
             (!t.targetUserId || t.targetUserId === userId))
       ),
       notifications: filterNotifications(db.notifications),
+      chatMessages: filterChatMessages(db.chatMessages || []),
     };
   }
 
@@ -909,6 +958,7 @@ export function sanitizeForRole(
         belongsToMyTeam(t.teamId, t.agentId || t.fromUserId)
       ),
       notifications: filterNotifications(db.notifications),
+      chatMessages: filterChatMessages(db.chatMessages || []),
     };
   }
 
@@ -935,5 +985,6 @@ export function sanitizeForRole(
       belongsToMyTeam(t.teamId, t.agentId || t.fromUserId)
     ),
     notifications: filterNotifications(db.notifications),
+    chatMessages: filterChatMessages(db.chatMessages || []),
   };
 }

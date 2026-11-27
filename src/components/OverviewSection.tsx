@@ -15,6 +15,7 @@ export type NavTab =
   | 'teams'
   | 'errors'
   | 'leads'
+  | 'chat'
   | 'inbox'
   | 'reminders'
   | 'meets'

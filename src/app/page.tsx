@@ -50,6 +50,7 @@ import { TicketsSection } from '@/components/TicketsSection';
 import { SalesSection } from '@/components/SalesSection';
 import { LoginScreen } from '@/components/LoginScreen';
 import { TeamManagementSection } from '@/components/TeamManagementSection';
+import { TeamChatSection } from '@/components/TeamChatSection';
 const ErrorCodeHubSection = dynamic(
   () => import('@/components/ErrorCodeHubSection').then((m) => m.ErrorCodeHubSection),
   { ssr: false }
@@ -520,6 +521,16 @@ export default function CrmAppPage() {
     (n) => !(n.readBy || []).includes(currentUser.id)
   ).length;
 
+  const unreadChatCount = useMemo(() => {
+    if (!db || !currentUser || !db.chatMessages) return 0;
+    return db.chatMessages.filter(
+      (m) =>
+        m.senderId !== currentUser.id &&
+        !m.readBy.includes(currentUser.id) &&
+        (!m.channelId ? m.receiverId === currentUser.id : true)
+    ).length;
+  }, [db, currentUser]);
+
   const allNavItems: Array<{
     id: NavTab;
     label: string;
@@ -531,6 +542,13 @@ export default function CrmAppPage() {
       id: 'overview',
       label: 'Dashboard Overview',
       icon: LayoutDashboard,
+      visible: true,
+    },
+    {
+      id: 'chat',
+      label: 'Team Chat',
+      icon: MessageSquare,
+      badge: unreadChatCount,
       visible: true,
     },
     {
@@ -923,7 +941,13 @@ export default function CrmAppPage() {
                           return (
                             <div
                               key={n.id}
-                              className={`p-3.5 text-xs ${
+                              onClick={() => {
+                                if (n.linkTab) {
+                                  handleTabChange(n.linkTab as NavTab);
+                                  setNotifOpen(false);
+                                }
+                              }}
+                              className={`p-3.5 text-xs transition ${n.linkTab ? 'cursor-pointer hover:bg-slate-50' : ''} ${
                                 isUnread ? 'bg-indigo-50/40' : 'bg-white'
                               }`}
                             >
@@ -1210,6 +1234,14 @@ export default function CrmAppPage() {
                 setInitialUploadMode(mode);
                 handleTabChange('leads');
               }}
+              onAction={handleAction}
+            />
+          )}
+
+          {activeTab === 'chat' && (
+            <TeamChatSection
+              db={db}
+              currentUser={currentUser}
               onAction={handleAction}
             />
           )}

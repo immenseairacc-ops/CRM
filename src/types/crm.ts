@@ -366,7 +366,8 @@ export type NotificationType =
   | 'ONBOARDING'
   | 'RECHARGE'
   | 'BILLING'
-  | 'SUPPORT_TICKET';
+  | 'SUPPORT_TICKET'
+  | 'CHAT';
 
 export interface TicketMessage {
   id: string;
@@ -419,6 +420,7 @@ export interface NotificationItem {
   message: string;
   type: NotificationType;
   relatedId?: string;
+  linkTab?: string;
   createdAt: string;
   readBy: string[];
 }
@@ -452,9 +454,34 @@ export interface ActivityLogItem {
     | 'RECHARGES'
     | 'TEAMS'
     | 'BACKUP'
+    | 'CHAT'
     | 'SYSTEM';
   details: string;
   timestamp: string;
+}
+
+export interface ChatAttachment {
+  id: string;
+  name: string;
+  type: 'IMAGE' | 'FILE';
+  url: string; // Base64 data URL or remote path
+  size?: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderRole: Role;
+  senderAvatar: string;
+  receiverId?: string; // For 1-on-1 private messaging (null if group channel)
+  channelId?: string;  // e.g. 'all-announcements' | 'sales-team' | 'support-escalations' | 'billing-accounts'
+  text: string;
+  attachments?: ChatAttachment[];
+  linkedLeadId?: string;
+  linkedLeadName?: string;
+  createdAt: string;
+  readBy: string[]; // User IDs who have read this message
 }
 
 export interface CrmDatabase {
@@ -468,4 +495,5 @@ export interface CrmDatabase {
   personalReminders?: PersonalReminder[];
   activityLogs?: ActivityLogItem[];
   notifications: NotificationItem[];
+  chatMessages?: ChatMessage[];
 }
