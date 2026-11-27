@@ -35,7 +35,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="overflow-x-hidden antialiased">{children}</body>
+      <body className="overflow-x-hidden antialiased" suppressHydrationWarning>{children}</body>
     </html>
   );
 }

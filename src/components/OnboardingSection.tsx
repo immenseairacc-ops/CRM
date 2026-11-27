@@ -244,6 +244,16 @@ export function OnboardingSection({
   const [gstNumber, setGstNumber] = useState('');
   const [gstPdfName, setGstPdfName] = useState('');
   const [gstPdfDataUrl, setGstPdfDataUrl] = useState('');
+  const [panCardName, setPanCardName] = useState('');
+  const [panCardDataUrl, setPanCardDataUrl] = useState('');
+  const [msmeDocName, setMsmeDocName] = useState('');
+  const [msmeDocDataUrl, setMsmeDocDataUrl] = useState('');
+  const [brandLogoName, setBrandLogoName] = useState('');
+  const [brandLogoDataUrl, setBrandLogoDataUrl] = useState('');
+  const [brandBannerName, setBrandBannerName] = useState('');
+  const [brandBannerDataUrl, setBrandBannerDataUrl] = useState('');
+  const [otherDocName, setOtherDocName] = useState('');
+  const [otherDocDataUrl, setOtherDocDataUrl] = useState('');
   const [postpaidCycle, setPostpaidCycle] = useState<PostpaidCycle>('30_DAYS');
 
   const [supportNoteTargetId, setSupportNoteTargetId] = useState<string | null>(
@@ -275,6 +285,99 @@ export function OnboardingSection({
 
   // Selected onboarding card to view full lead interaction history & timeline
   const [viewHistoryItem, setViewHistoryItem] = useState<any | null>(null);
+  // Selected onboarding card to view & download KYC & Brand assets
+  const [viewKycItem, setViewKycItem] = useState<OnboardingRequest | null>(null);
+
+  const getKycDocs = (item?: OnboardingRequest | null) => {
+    if (!item) return [];
+    const docs: {
+      key: string;
+      label: string;
+      type: string;
+      url: string;
+      fileName: string;
+      isImage?: boolean;
+      description: string;
+    }[] = [];
+
+    if (item.panCardDataUrl) {
+      const isImg = item.panCardDataUrl.startsWith('data:image/');
+      docs.push({
+        key: 'pan',
+        label: 'PAN Card (Company / Director)',
+        type: isImg ? 'Image' : 'PDF Document',
+        url: item.panCardDataUrl,
+        fileName: item.panCardName || `PAN_${item.username || item.id}.${isImg ? 'jpg' : 'pdf'}`,
+        isImage: isImg,
+        description: 'Tax identity verification document',
+      });
+    }
+
+    if (item.gstPdfDataUrl) {
+      const isImg = item.gstPdfDataUrl.startsWith('data:image/');
+      docs.push({
+        key: 'gst',
+        label: 'GST Certificate',
+        type: isImg ? 'Image' : 'PDF Document',
+        url: item.gstPdfDataUrl,
+        fileName: item.gstPdfName || `GST_${item.username || item.id}.${isImg ? 'jpg' : 'pdf'}`,
+        isImage: isImg,
+        description: item.gstNumber ? `GSTIN: ${item.gstNumber}` : 'Government GST Registration',
+      });
+    }
+
+    if (item.msmeDocDataUrl) {
+      const isImg = item.msmeDocDataUrl.startsWith('data:image/');
+      docs.push({
+        key: 'msme',
+        label: 'MSME / Udyam Certificate',
+        type: isImg ? 'Image' : 'PDF Document',
+        url: item.msmeDocDataUrl,
+        fileName: item.msmeDocName || `MSME_${item.username || item.id}.${isImg ? 'jpg' : 'pdf'}`,
+        isImage: isImg,
+        description: 'Small & Medium Enterprises registration certificate',
+      });
+    }
+
+    if (item.brandLogoDataUrl) {
+      docs.push({
+        key: 'logo',
+        label: 'Brand Logo',
+        type: 'PNG / Image',
+        url: item.brandLogoDataUrl,
+        fileName: item.brandLogoName || `BrandLogo_${item.username || item.id}.png`,
+        isImage: true,
+        description: 'Used for RCS Brand Avatar, WhatsApp Business Profile, and DLT Portal',
+      });
+    }
+
+    if (item.brandBannerDataUrl) {
+      docs.push({
+        key: 'banner',
+        label: 'Brand Banner (1440x448)',
+        type: 'RCS Header Image',
+        url: item.brandBannerDataUrl,
+        fileName: item.brandBannerName || `BrandBanner_${item.username || item.id}.jpg`,
+        isImage: true,
+        description: 'RCS Messaging Rich Card Header Banner',
+      });
+    }
+
+    if (item.otherDocDataUrl) {
+      const isImg = item.otherDocDataUrl.startsWith('data:image/');
+      docs.push({
+        key: 'other',
+        label: 'Client Agreement / Other Document',
+        type: isImg ? 'Image' : 'Document / PDF',
+        url: item.otherDocDataUrl,
+        fileName: item.otherDocName || `Doc_${item.username || item.id}.${isImg ? 'jpg' : 'pdf'}`,
+        isImage: isImg,
+        description: 'Service agreement, purchase order, or authorized signatory proof',
+      });
+    }
+
+    return docs;
+  };
   // Support Request / Ticket states
   const [ticketTargetOnb, setTicketTargetOnb] = useState<any | null>(null);
   const [ticketServiceCategory, setTicketServiceCategory] = useState('SMS / RCS Routing');
@@ -487,6 +590,16 @@ export function OnboardingSection({
       gstNumber: taxType === 'GST' ? gstNumber : undefined,
       gstPdfName: taxType === 'GST' && gstPdfName ? gstPdfName : undefined,
       gstPdfDataUrl: taxType === 'GST' && gstPdfDataUrl ? gstPdfDataUrl : undefined,
+      panCardName: panCardName || undefined,
+      panCardDataUrl: panCardDataUrl || undefined,
+      msmeDocName: msmeDocName || undefined,
+      msmeDocDataUrl: msmeDocDataUrl || undefined,
+      brandLogoName: brandLogoName || undefined,
+      brandLogoDataUrl: brandLogoDataUrl || undefined,
+      brandBannerName: brandBannerName || undefined,
+      brandBannerDataUrl: brandBannerDataUrl || undefined,
+      otherDocName: otherDocName || undefined,
+      otherDocDataUrl: otherDocDataUrl || undefined,
       taxType,
       paymentType: billingType,
       postpaidCycle: billingType === 'POSTPAID' ? postpaidCycle : undefined,
@@ -508,6 +621,16 @@ export function OnboardingSection({
       setGstNumber('');
       setGstPdfName('');
       setGstPdfDataUrl('');
+      setPanCardName('');
+      setPanCardDataUrl('');
+      setMsmeDocName('');
+      setMsmeDocDataUrl('');
+      setBrandLogoName('');
+      setBrandLogoDataUrl('');
+      setBrandBannerName('');
+      setBrandBannerDataUrl('');
+      setOtherDocName('');
+      setOtherDocDataUrl('');
       setTaxType('GST');
     }
   };
@@ -974,11 +1097,24 @@ export function OnboardingSection({
                         <div className="text-xs font-mono text-indigo-700 mt-0.5">
                           @{item.username}
                         </div>
-                        {!isSupport && ((item.quotationHistory?.length || 0) > 0 || item.quotation) && (
-                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold">
-                            📄 {item.quotationHistory?.length || 1} Quote(s)
-                          </span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-1 mt-1">
+                          {!isSupport && ((item.quotationHistory?.length || 0) > 0 || item.quotation) && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold">
+                              📄 {item.quotationHistory?.length || 1} Quote(s)
+                            </span>
+                          )}
+                          {getKycDocs(item).length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setViewKycItem(item)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[10px] font-bold transition shadow-xs"
+                              title="Click to view & download KYC and Brand Assets"
+                            >
+                              <Paperclip className="w-3 h-3 text-indigo-600" />
+                              <span>KYC ({getKycDocs(item).length})</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-xs text-slate-700 max-w-[200px]">
                         {item.billingEntity || '—'}
@@ -1085,6 +1221,18 @@ export function OnboardingSection({
                                 >
                                   <Key className="w-3.5 h-3.5 text-[#F2591F]" />
                                   Login Details
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionRowId(null);
+                                    setViewKycItem(item);
+                                  }}
+                                  className="w-full px-3 py-2 rounded-xl hover:bg-indigo-50 text-xs font-bold text-indigo-700 flex items-center gap-2"
+                                >
+                                  <Paperclip className="w-3.5 h-3.5 text-indigo-600" />
+                                  KYC &amp; Brand Assets ({getKycDocs(item).length})
                                 </button>
 
                                 {!isSupport && (
@@ -1319,6 +1467,151 @@ export function OnboardingSection({
                 </div>
               </div>
             )}
+
+            {/* Client KYC & Brand Documents Upload (Compressed & High Quality) */}
+            <div className="pt-3 border-t border-slate-200/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-indigo-600" />
+                  Client KYC &amp; Brand Assets (PAN, Logo, Banner, MSME)
+                </label>
+                <span className="text-[10px] text-slate-400">Auto-compressed for fast download</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 1. PAN Card */}
+                <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-700">PAN Card (PDF / Image)</label>
+                    {panCardName && (
+                      <button
+                        type="button"
+                        onClick={() => { setPanCardName(''); setPanCardDataUrl(''); }}
+                        className="text-[10px] text-red-500 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf,application/pdf"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const url = await fileToDataUrl(file);
+                      setPanCardName(file.name);
+                      setPanCardDataUrl(url);
+                    }}
+                    className="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  />
+                  {panCardName && (
+                    <div className="text-[10px] text-emerald-700 font-semibold truncate flex items-center gap-1">
+                      ✓ Attached: {panCardName}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. MSME / Udyam Certificate */}
+                <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-700">MSME / Udyam Certificate (PDF)</label>
+                    {msmeDocName && (
+                      <button
+                        type="button"
+                        onClick={() => { setMsmeDocName(''); setMsmeDocDataUrl(''); }}
+                        className="text-[10px] text-red-500 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf,application/pdf"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const url = await fileToDataUrl(file);
+                      setMsmeDocName(file.name);
+                      setMsmeDocDataUrl(url);
+                    }}
+                    className="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  />
+                  {msmeDocName && (
+                    <div className="text-[10px] text-emerald-700 font-semibold truncate flex items-center gap-1">
+                      ✓ Attached: {msmeDocName}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Brand Logo (RCS / WhatsApp API) */}
+                <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-700">Brand Logo (PNG/JPEG for RCS/WABA)</label>
+                    {brandLogoName && (
+                      <button
+                        type="button"
+                        onClick={() => { setBrandLogoName(''); setBrandLogoDataUrl(''); }}
+                        className="text-[10px] text-red-500 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const url = await fileToDataUrl(file);
+                      setBrandLogoName(file.name);
+                      setBrandLogoDataUrl(url);
+                    }}
+                    className="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  />
+                  {brandLogoName && (
+                    <div className="text-[10px] text-emerald-700 font-semibold truncate flex items-center gap-1">
+                      ✓ Attached: {brandLogoName}
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Banner Image (RCS Header) */}
+                <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-700">Banner Image (1440x448 px for RCS)</label>
+                    {brandBannerName && (
+                      <button
+                        type="button"
+                        onClick={() => { setBrandBannerName(''); setBrandBannerDataUrl(''); }}
+                        className="text-[10px] text-red-500 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const url = await fileToDataUrl(file);
+                      setBrandBannerName(file.name);
+                      setBrandBannerDataUrl(url);
+                    }}
+                    className="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  />
+                  {brandBannerName && (
+                    <div className="text-[10px] text-emerald-700 font-semibold truncate flex items-center gap-1">
+                      ✓ Attached: {brandBannerName}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Services to Provision & Rate / Count Config */}
@@ -2344,6 +2637,50 @@ export function OnboardingSection({
           }
 
           // C. Onboarding & Portal Credentials Provisioned Events
+          const kycDownloads: { label: string; url: string; fileName: string }[] = [];
+          if (viewHistoryItem.gstPdfDataUrl) {
+            kycDownloads.push({
+              label: 'GST Certificate (PDF)',
+              url: viewHistoryItem.gstPdfDataUrl,
+              fileName: viewHistoryItem.gstPdfName || `GST_${viewHistoryItem.username}.pdf`,
+            });
+          }
+          if (viewHistoryItem.panCardDataUrl) {
+            kycDownloads.push({
+              label: 'PAN Card',
+              url: viewHistoryItem.panCardDataUrl,
+              fileName: viewHistoryItem.panCardName || `PAN_${viewHistoryItem.username}.jpg`,
+            });
+          }
+          if (viewHistoryItem.msmeDocDataUrl) {
+            kycDownloads.push({
+              label: 'MSME Certificate',
+              url: viewHistoryItem.msmeDocDataUrl,
+              fileName: viewHistoryItem.msmeDocName || `MSME_${viewHistoryItem.username}.pdf`,
+            });
+          }
+          if (viewHistoryItem.brandLogoDataUrl) {
+            kycDownloads.push({
+              label: 'Brand Logo (RCS/WABA)',
+              url: viewHistoryItem.brandLogoDataUrl,
+              fileName: viewHistoryItem.brandLogoName || `Logo_${viewHistoryItem.username}.png`,
+            });
+          }
+          if (viewHistoryItem.brandBannerDataUrl) {
+            kycDownloads.push({
+              label: 'Brand Banner (1440x448)',
+              url: viewHistoryItem.brandBannerDataUrl,
+              fileName: viewHistoryItem.brandBannerName || `Banner_${viewHistoryItem.username}.jpg`,
+            });
+          }
+          if (viewHistoryItem.otherDocDataUrl) {
+            kycDownloads.push({
+              label: 'Agreement / Other Document',
+              url: viewHistoryItem.otherDocDataUrl,
+              fileName: viewHistoryItem.otherDocName || `Doc_${viewHistoryItem.username}.pdf`,
+            });
+          }
+
           events.push({
             id: `onb-init-${viewHistoryItem.id}`,
             category: 'ONBOARDING',
@@ -2354,6 +2691,7 @@ export function OnboardingSection({
             timestamp: viewHistoryItem.createdAt,
             summary: `Services: ${(viewHistoryItem.services || []).join(', ')}${!isSupport && viewHistoryItem.billingEntity ? ` • Billing Entity: ${viewHistoryItem.billingEntity} (GST: ${viewHistoryItem.gstNumber || 'Non-GST'})` : ''}`,
             amountText: !isSupport && viewHistoryItem.totalDealAmount ? `Deal: ${formatINR(viewHistoryItem.totalDealAmount)}` : undefined,
+            downloads: kycDownloads.length > 0 ? kycDownloads : undefined,
           });
 
           if (viewHistoryItem.portalCredentials && viewHistoryItem.portalCredentials.length > 0) {
@@ -3096,6 +3434,105 @@ export function OnboardingSection({
           setQuoteModalState(null);
         }}
       />
+
+      {/* KYC & Brand Assets Modal for Agent, Admin & Support */}
+      <Modal
+        open={Boolean(viewKycItem)}
+        onClose={() => setViewKycItem(null)}
+        title={`KYC & Brand Assets — ${viewKycItem?.companyName || ''}`}
+        subtitle={`Account: @${viewKycItem?.username || ''} • Entity: ${viewKycItem?.billingEntity || 'N/A'}`}
+        maxWidth="max-w-2xl"
+      >
+        {viewKycItem && (
+          <div className="space-y-4">
+            {getKycDocs(viewKycItem).length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {getKycDocs(viewKycItem).map((doc) => (
+                  <div
+                    key={doc.key}
+                    className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:shadow-md transition space-y-2 flex flex-col justify-between"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-extrabold text-[#0A1B3F]">
+                          {doc.label}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">
+                          {doc.type}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        {doc.description}
+                      </p>
+
+                      {/* Image Thumbnail Preview if applicable */}
+                      {doc.isImage && (
+                        <div
+                          onClick={() => setZoomedScreenshot(doc.url)}
+                          className="w-full h-24 rounded-xl border border-slate-200 overflow-hidden bg-white cursor-pointer relative group flex items-center justify-center"
+                          title="Click to view full size"
+                        >
+                          <img
+                            src={doc.url}
+                            alt={doc.label}
+                            className="w-full h-full object-contain p-1 group-hover:scale-105 transition"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-[11px] font-bold gap-1">
+                            <ZoomIn className="w-4 h-4" />
+                            <span>Preview</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="text-[11px] font-mono text-slate-600 truncate bg-white px-2 py-1 rounded-lg border border-slate-200/80">
+                        📄 {doc.fileName}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Preview
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => triggerDirectDownload(doc.url, doc.fileName)}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center space-y-2">
+                <Paperclip className="w-10 h-10 text-slate-300 mx-auto" />
+                <div className="text-sm font-bold text-slate-700">No KYC Documents Attached</div>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  No PAN, GST, MSME or Brand assets were uploaded during client onboarding.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setViewKycItem(null)}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
     </div>
   );

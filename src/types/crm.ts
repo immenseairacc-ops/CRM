@@ -232,7 +232,17 @@ export interface OnboardingRequest {
   billingEntity?: string; // Entity name for raising bill
   gstNumber?: string; // GST Number
   gstPdfName?: string; // Optional GST Certificate PDF filename
-  gstPdfDataUrl?: string; // Lightweight base64 PDF (max 500 KB)
+  gstPdfDataUrl?: string; // Lightweight base64 PDF
+  panCardName?: string; // Company / Director PAN Card PDF/Image
+  panCardDataUrl?: string;
+  msmeDocName?: string; // Udyam / MSME Certificate PDF/Image
+  msmeDocDataUrl?: string;
+  brandLogoName?: string; // Brand Logo (PNG/JPEG)
+  brandLogoDataUrl?: string;
+  brandBannerName?: string; // Brand Banner / Header Image
+  brandBannerDataUrl?: string;
+  otherDocName?: string; // Agreement / PO / Cheque
+  otherDocDataUrl?: string;
   taxType?: TaxType; // GST or Non-GST
   paymentType?: BillingType; // PREPAID or POSTPAID
   postpaidCycle?: PostpaidCycle; // 10 days, 15 days, 20 days, 25 days, 30 days, 45 days

@@ -200,12 +200,21 @@ export function fileToDataUrl(file: File): Promise<string> {
             canvas.height = h;
             const ctx = canvas.getContext('2d');
             if (ctx) {
-              ctx.fillStyle = '#ffffff';
-              ctx.fillRect(0, 0, w, h);
-              ctx.drawImage(img, 0, 0, w, h);
-              const compressed = canvas.toDataURL('image/jpeg', 0.72);
-              resolve(compressed.length < rawDataUrl.length ? compressed : rawDataUrl);
-              return;
+              const isPng = file.type === 'image/png';
+              if (isPng) {
+                ctx.clearRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+                const compressed = canvas.toDataURL('image/png');
+                resolve(compressed.length < rawDataUrl.length ? compressed : rawDataUrl);
+                return;
+              } else {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+                const compressed = canvas.toDataURL('image/jpeg', 0.80);
+                resolve(compressed.length < rawDataUrl.length ? compressed : rawDataUrl);
+                return;
+              }
             }
           } catch {
             // fallback to rawDataUrl
