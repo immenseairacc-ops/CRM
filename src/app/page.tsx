@@ -685,7 +685,7 @@ export default function CrmAppPage() {
   ];
   const navItems = allNavItems.filter((item) => item.visible);
 
-  const primaryMobileNavItems = useMemo(() => {
+  const primaryMobileNavItems = (() => {
     let preferredIds: NavTab[] = [];
     if (role === 'AGENT') {
       preferredIds = ['leads', 'overview', 'chat', 'quotations'];
@@ -712,7 +712,7 @@ export default function CrmAppPage() {
       }
     }
     return list;
-  }, [role, navItems]);
+  })();
 
   return (
     <div className="min-h-screen flex bg-[#F8FAFC] text-slate-900">
