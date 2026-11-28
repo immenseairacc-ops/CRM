@@ -2931,6 +2931,121 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      case 'TRANSFER_AGENT_PORTFOLIO': {
+        if (actorRole !== 'ADMIN' && actorRole !== 'ACCOUNT_MANAGER') {
+          return NextResponse.json(
+            { ok: false, error: 'Only Admin or Account Manager can transfer an agent portfolio.' },
+            { status: 403 }
+          );
+        }
+        const fromAgentId = String(payload.fromAgentId || '').trim();
+        const toAgentId = String(payload.toAgentId || '').trim();
+        const deactivateFromAgent = Boolean(payload.deactivateFromAgent);
+
+        if (!fromAgentId || !toAgentId) {
+          return NextResponse.json(
+            { ok: false, error: 'Please select both source and destination agents.' },
+            { status: 400 }
+          );
+        }
+        if (fromAgentId === toAgentId) {
+          return NextResponse.json(
+            { ok: false, error: 'Source and destination agent cannot be the same.' },
+            { status: 400 }
+          );
+        }
+
+        const fromUser = db.users.find((u) => u.id === fromAgentId);
+        const toUser = db.users.find((u) => u.id === toAgentId);
+
+        if (!fromUser || !toUser) {
+          return NextResponse.json(
+            { ok: false, error: 'Agent not found in system.' },
+            { status: 404 }
+          );
+        }
+
+        const now = new Date().toISOString();
+        let transferredLeadsCount = 0;
+        let transferredClientsCount = 0;
+        let transferredRechargesCount = 0;
+
+        // 1. Reassign all Leads
+        db.leads.forEach((lead) => {
+          if (lead.assignedToAgentId === fromAgentId) {
+            lead.assignedToAgentId = toUser.id;
+            lead.assignedToAgentName = toUser.name;
+            lead.updatedAt = now;
+            if (!lead.callLogs) lead.callLogs = [];
+            lead.callLogs.unshift({
+              id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              type: 'NOTE',
+              summary: `Portfolio Handover: Transferred from ${fromUser.name} to ${toUser.name} (${deactivateFromAgent ? 'Agent Exit & Handover' : 'Reassignment'}).`,
+              createdBy: actor.name,
+              creatorRole: actor.role,
+              createdAt: now,
+            });
+            transferredLeadsCount++;
+          }
+        });
+
+        // 2. Reassign all Onboarded Clients
+        db.onboardingRequests.forEach((onb) => {
+          if (onb.agentId === fromAgentId) {
+            onb.agentId = toUser.id;
+            onb.agentName = toUser.name;
+            transferredClientsCount++;
+          }
+        });
+
+        // 3. Reassign Recharge / Campaign requests
+        db.rechargeRequests.forEach((rc) => {
+          if (rc.agentId === fromAgentId) {
+            rc.agentId = toUser.id;
+            rc.agentName = toUser.name;
+            transferredRechargesCount++;
+          }
+        });
+
+        // 4. Optionally deactivate the departing agent
+        if (deactivateFromAgent) {
+          fromUser.isActive = false;
+        }
+
+        // 5. Activity Log
+        if (!db.activityLogs) db.activityLogs = [];
+        db.activityLogs.unshift({
+          id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          actorId: actor.id,
+          actorName: actor.name,
+          actorRole: actor.role,
+          action: 'TRANSFER_AGENT_PORTFOLIO',
+          module: 'TEAMS',
+          details: `Transferred ${transferredLeadsCount} leads, ${transferredClientsCount} onboarded clients, and ${transferredRechargesCount} recharges from ${fromUser.name} to ${toUser.name}.${deactivateFromAgent ? ` Deactivated ${fromUser.name}'s account.` : ''}`,
+          timestamp: now,
+        });
+
+        // 6. Notification to new recipient agent
+        if (!db.notifications) db.notifications = [];
+        db.notifications.unshift({
+          id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          targetRoles: [toUser.role],
+          targetUserIds: [toUser.id],
+          title: 'Client & Lead Portfolio Handover Received',
+          message: `Admin has assigned you ${transferredLeadsCount} leads and ${transferredClientsCount} onboarded clients from ${fromUser.name}.`,
+          type: 'LEAD',
+          createdAt: now,
+          readBy: [],
+        });
+
+        await writeDatabaseAsync(db);
+        return NextResponse.json({
+          ok: true,
+          data: sanitizeForRole(db, actorRole, actor.id),
+          message: `Successfully transferred ${transferredLeadsCount} leads and ${transferredClientsCount} clients to ${toUser.name}.${deactivateFromAgent ? ` ${fromUser.name}'s account has been deactivated.` : ''}`,
+        });
+      }
+
       case 'RESTORE_DATABASE_BACKUP': {
         if (actorRole !== 'ADMIN') {
           return NextResponse.json(
