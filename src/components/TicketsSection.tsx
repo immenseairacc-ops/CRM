@@ -57,6 +57,7 @@ export function TicketsSection({
   // Create Ticket Modal State
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [targetRole, setTargetRole] = useState<Role>('SUPPORT');
+  const [targetUserId, setTargetUserId] = useState<string>('');
   const [onboardingId, setOnboardingId] = useState('');
   const [manualUsername, setManualUsername] = useState('');
   const [manualCompany, setManualCompany] = useState('');
@@ -75,6 +76,7 @@ export function TicketsSection({
     serviceCategory: string;
     priority: string;
     targetRole: Role;
+    targetUserName?: string;
   } | null>(null);
 
   // Ticket Detail / Thread Modal State
@@ -152,12 +154,15 @@ export function TicketsSection({
 
     const clientUser = targetOnb ? targetOnb.username : manualUsername || 'inhouse_general';
     const compName = targetOnb ? targetOnb.companyName : manualCompany || 'General Internal Query';
+    const targetUserObj = (db.users || []).find((u) => u.id === targetUserId);
 
     const ok = await onAction('CREATE_SUPPORT_TICKET', {
       onboardingId: targetOnb?.id,
       username: clientUser,
       companyName: compName,
       targetRole,
+      targetUserId: targetUserId || undefined,
+      targetUserName: targetUserObj?.name || undefined,
       serviceCategory,
       priority,
       subject: subject || `${serviceCategory} regarding @${clientUser}`,
@@ -174,7 +179,9 @@ export function TicketsSection({
         serviceCategory,
         priority,
         targetRole,
+        targetUserName: targetUserObj?.name || undefined,
       });
+      setTargetUserId('');
     }
   };
 
@@ -503,7 +510,7 @@ export function TicketsSection({
                           </span>
                           <ArrowRight className="w-3 h-3 text-slate-400 shrink-0" />
                           <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-extrabold border border-purple-200">
-                            {targetRoleMeta.label}
+                            {targetRoleMeta.label}{tkt.targetUserName ? ` → ${tkt.targetUserName}` : ''}
                           </span>
                         </div>
 
@@ -712,9 +719,10 @@ export function TicketsSection({
                 </span>
               </div>
               <div className="flex justify-between items-center py-1">
-                <span className="text-slate-500 font-semibold">Assigned Team</span>
+                <span className="text-slate-500 font-semibold">Assigned Team &amp; Person</span>
                 <span className="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold text-[11px]">
                   {ROLE_META[ticketSuccessData.targetRole]?.label || ticketSuccessData.targetRole}
+                  {ticketSuccessData.targetUserName ? ` → 👤 ${ticketSuccessData.targetUserName}` : ' (All Team)'}
                 </span>
               </div>
             </div>
@@ -825,6 +833,37 @@ export function TicketsSection({
               </button>
             </div>
           </div>
+
+          {/* Specific Person Assignee Selector (e.g. Ajeet, Pervej, etc.) */}
+          {(() => {
+            const assignees = (db.users || []).filter(
+              (u) => u.role === targetRole && u.isActive !== false
+            );
+            return (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Assign to Specific Person in {ROLE_META[targetRole]?.label || targetRole} (Optional)
+                </label>
+                <select
+                  value={targetUserId}
+                  onChange={(e) => setTargetUserId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white"
+                >
+                  <option value="">-- All {ROLE_META[targetRole]?.label || targetRole} Team (Shared Queue) --</option>
+                  {assignees.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      👤 {u.name} ({u.designation || ROLE_META[u.role]?.label})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {targetUserId
+                    ? `Yeh ticket direct ${assignees.find((u) => u.id === targetUserId)?.name || 'selected user'} ko assign ho jayega.`
+                    : `Kisi ek ko select na karne par poori ${ROLE_META[targetRole]?.label || targetRole} team ke queue me show hoga.`}
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Client Account Selector */}
           <div>
