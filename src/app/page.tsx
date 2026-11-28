@@ -65,6 +65,23 @@ import {
   RoleBadge,
 } from '@/components/ui';
 
+const APP_ICON_STYLES: Record<string, { bg: string; text: string }> = {
+  overview: { bg: 'from-slate-800 to-[#0A1B3F]', text: 'text-white' },
+  leads: { bg: 'from-blue-500 to-indigo-600', text: 'text-white' },
+  chat: { bg: 'from-emerald-500 to-teal-600', text: 'text-white' },
+  quotations: { bg: 'from-[#F2591F] to-amber-500', text: 'text-white' },
+  sales: { bg: 'from-purple-600 to-indigo-700', text: 'text-white' },
+  tickets: { bg: 'from-rose-500 to-pink-600', text: 'text-white' },
+  reminders: { bg: 'from-amber-400 to-orange-500', text: 'text-white' },
+  meets: { bg: 'from-sky-500 to-blue-600', text: 'text-white' },
+  onboarding: { bg: 'from-teal-500 to-cyan-600', text: 'text-white' },
+  recharges: { bg: 'from-violet-500 to-purple-600', text: 'text-white' },
+  billing: { bg: 'from-blue-600 to-slate-800', text: 'text-white' },
+  errors: { bg: 'from-slate-600 to-slate-700', text: 'text-white' },
+  teams: { bg: 'from-amber-600 to-yellow-600', text: 'text-white' },
+  inbox: { bg: 'from-slate-500 to-slate-700', text: 'text-white' },
+};
+
 export default function CrmAppPage() {
   const [db, setDb] = useState<CrmDatabase | null>(null);
   const [authChecked, setAuthChecked] = useState<boolean>(false);
@@ -1049,25 +1066,25 @@ export default function CrmAppPage() {
               <button
                 onClick={handleInstallApp}
                 title="Install Mobile App on Phone"
-                className="px-2.5 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
+                className="hidden sm:flex px-2.5 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold items-center gap-1.5 transition shadow-2xs"
               >
                 <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">Install App</span>
+                <span>Install App</span>
               </button>
             )}
 
-            {/* Mobile Phone Push Alerts Button */}
+            {/* Mobile Phone Push Alerts Button (Desktop & Tablet) */}
             <button
               onClick={phoneNotifStatus === 'granted' ? handleTestPhoneNotification : handleEnablePhoneNotifications}
               title={phoneNotifStatus === 'granted' ? 'Phone alerts active (Click to test vibration & sound)' : 'Enable phone push alerts'}
-              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition shadow-2xs ${
+              className={`hidden md:flex px-2.5 py-1.5 rounded-xl border text-xs font-bold items-center gap-1.5 transition shadow-2xs ${
                 phoneNotifStatus === 'granted'
                   ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
                   : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 animate-pulse'
               }`}
             >
               <BellRing className={`w-3.5 h-3.5 ${phoneNotifStatus === 'granted' ? 'text-blue-600' : 'text-amber-600'}`} />
-              <span className="hidden md:inline">
+              <span>
                 {phoneNotifStatus === 'granted' ? 'Phone Alerts ON' : 'Enable Phone Alerts'}
               </span>
             </button>
@@ -1076,10 +1093,10 @@ export default function CrmAppPage() {
               <button
                 onClick={() => setBackupLogsOpen(true)}
                 title="Admin Backup & Audit Logs"
-                className="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
+                className="hidden md:flex px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold items-center gap-1.5 transition shadow-2xs"
               >
                 <Database className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Backup & Logs</span>
+                <span>Backup & Logs</span>
               </button>
             )}
           </div>
@@ -1390,49 +1407,51 @@ export default function CrmAppPage() {
         </main>
       </div>
 
-      {/* Mobile Bottom Quick Navigation Bar (Phone Friendly) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_25px_rgba(10,27,63,0.08)]">
-        {primaryMobileNavItems.map((item) => {
-          const Icon = item.icon;
-          const active = activeTab === item.id;
-          return (
-            <button
-              key={`mob-${item.id}`}
-              type="button"
-              onClick={() => handleTabChange(item.id)}
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[58px] transition relative active:scale-95 ${
-                active ? 'text-[#F2591F] font-bold' : 'text-slate-500 hover:text-[#0A1B3F]'
-              }`}
-            >
-              <div className={`p-1 rounded-xl transition ${active ? 'bg-[#F2591F]/10' : ''}`}>
-                <Icon className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] font-bold mt-0.5 tracking-tight truncate max-w-[62px]">
-                {item.shortLabel || item.label.split(' ')[0]}
-              </span>
-              {item.badge !== undefined && item.badge > 0 && (
-                <span className="absolute top-0 right-2 px-1 min-w-[15px] h-3.5 rounded-full bg-[#F2591F] text-white text-[9px] font-black flex items-center justify-center shadow-xs">
-                  {item.badge > 99 ? '99+' : item.badge}
+      {/* Mobile Floating Glass Bottom Dock (Ultra Neat & Clean) */}
+      <div className="lg:hidden fixed bottom-3 inset-x-0 z-40 px-3 flex justify-center pointer-events-none">
+        <nav className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl px-2 py-1.5 flex items-center justify-around gap-1 shadow-[0_8px_30px_rgba(10,27,63,0.14)] max-w-md w-full">
+          {primaryMobileNavItems.map((item) => {
+            const Icon = item.icon;
+            const active = activeTab === item.id;
+            return (
+              <button
+                key={`mob-${item.id}`}
+                type="button"
+                onClick={() => handleTabChange(item.id)}
+                className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[56px] transition relative active:scale-95 ${
+                  active ? 'text-[#F2591F] font-bold' : 'text-slate-500 hover:text-[#0A1B3F]'
+                }`}
+              >
+                <div className={`p-1.5 rounded-xl transition ${active ? 'bg-[#F2591F]/10 text-[#F2591F]' : ''}`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-bold mt-0.5 tracking-tight truncate max-w-[62px]">
+                  {item.shortLabel || item.label.split(' ')[0]}
                 </span>
-              )}
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => setMobileHubOpen(true)}
-          className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[58px] transition active:scale-95 ${
-            mobileHubOpen ? 'text-[#0A1B3F] font-bold' : 'text-slate-500 hover:text-[#0A1B3F]'
-          }`}
-        >
-          <div className="p-1 rounded-xl bg-slate-100 text-[#0A1B3F]">
-            <Grid className="w-5 h-5" />
-          </div>
-          <span className="text-[10px] font-bold mt-0.5 tracking-tight">All Apps</span>
-        </button>
-      </nav>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="absolute top-0 right-2 px-1 min-w-[15px] h-3.5 rounded-full bg-[#F2591F] text-white text-[9px] font-black flex items-center justify-center shadow-xs">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setMobileHubOpen(true)}
+            className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[56px] transition active:scale-95 ${
+              mobileHubOpen ? 'text-[#0A1B3F] font-bold' : 'text-slate-500 hover:text-[#0A1B3F]'
+            }`}
+          >
+            <div className="p-1.5 rounded-xl bg-slate-100 text-[#0A1B3F]">
+              <Grid className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-bold mt-0.5 tracking-tight">All Apps</span>
+          </button>
+        </nav>
+      </div>
 
-      {/* Mobile "All Apps" Hub Drawer (Phone Native App Launcher) */}
+      {/* Mobile "All Apps" Hub Drawer (Phone Native App Launcher - Visual & Clean) */}
       {mobileHubOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end lg:hidden">
           {/* Backdrop */}
@@ -1442,25 +1461,28 @@ export default function CrmAppPage() {
           />
 
           {/* Sheet Container */}
-          <div className="relative bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden border-t border-slate-200">
+          <div className="relative bg-white rounded-t-3xl shadow-2xl max-h-[88vh] flex flex-col overflow-hidden border-t border-slate-200 animate-in slide-in-from-bottom duration-200">
             {/* Sheet Handle */}
             <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
 
             {/* Header */}
             <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3">
-                <CuteAgentAvatar size={36} />
+              <div className="flex items-center gap-2.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/immense-logo.jpg"
+                  alt="Immense Air"
+                  className="w-8 h-8 rounded-xl object-contain border border-slate-200 bg-white shadow-xs shrink-0"
+                />
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-slate-900">{currentUser.name}</span>
-                    <span className="px-2 py-0.5 rounded-md bg-[#F2591F]/10 text-[#F2591F] text-[10px] font-black uppercase">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-black text-slate-900 tracking-tight">IMMENSE AIR APPS</span>
+                    <span className="px-2 py-0.2 rounded-md bg-[#F2591F]/10 text-[#F2591F] text-[10px] font-black uppercase">
                       {ROLE_META[currentUser.role]?.short || currentUser.role}
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-500 font-medium">
-                    {currentUser.teamId
-                      ? (db.teams || []).find((t) => t.id === currentUser.teamId)?.name || currentUser.teamId
-                      : 'Immense Air Workspace'}
+                  <div className="text-[11px] text-slate-500 font-semibold">
+                    {currentUser.name} • {(db.teams || []).find((t) => t.id === currentUser.teamId)?.name || 'Master CRM'}
                   </div>
                 </div>
               </div>
@@ -1475,278 +1497,115 @@ export default function CrmAppPage() {
               </button>
             </div>
 
-            {/* Scrollable Feature Grid */}
-            <div className="p-4 overflow-y-auto space-y-4 pb-12">
-              {/* Categorized Features */}
-              <div className="space-y-4">
-                {/* 1. Core & Sales */}
-                <div>
-                  <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1 flex items-center gap-1.5">
-                    <BarChart3 className="w-3.5 h-3.5 text-[#F2591F]" /> Sales &amp; Growth
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {navItems
-                      .filter((item) => ['overview', 'leads', 'quotations', 'sales', 'reminders', 'meets'].includes(item.id))
-                      .map((item) => {
-                        const Icon = item.icon;
-                        const active = activeTab === item.id;
-                        return (
-                          <button
-                            key={`hub-${item.id}`}
-                            type="button"
-                            onClick={() => {
-                              handleTabChange(item.id);
-                              setMobileHubOpen(false);
-                            }}
-                            className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition active:scale-98 ${
-                              active
-                                ? 'bg-gradient-to-br from-[#0A1B3F] to-[#122b5e] text-white border-[#0A1B3F] shadow-md'
-                                : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/80 text-slate-900'
-                            }`}
-                          >
-                            <div
-                              className={`p-2 rounded-xl shrink-0 ${
-                                active ? 'bg-[#F2591F] text-white' : 'bg-white text-[#0A1B3F] shadow-xs'
-                              }`}
-                            >
-                              <Icon className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="text-xs font-bold truncate">{item.label}</span>
-                                {item.badge !== undefined && item.badge > 0 && (
-                                  <span
-                                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-black shrink-0 ${
-                                      active ? 'bg-[#F2591F] text-white' : 'bg-rose-500 text-white'
-                                    }`}
-                                  >
-                                    {item.badge}
-                                  </span>
-                                )}
-                              </div>
-                              <span className={`text-[10px] block mt-0.5 line-clamp-1 ${active ? 'text-slate-300' : 'text-slate-500'}`}>
-                                {item.shortLabel || item.label}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                  </div>
-                </div>
-
-                {/* 2. Operations & Billing */}
-                {navItems.some((item) => ['onboarding', 'recharges', 'billing'].includes(item.id)) && (
-                  <div>
-                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1 flex items-center gap-1.5">
-                      <Receipt className="w-3.5 h-3.5 text-indigo-500" /> Operations &amp; Billing
-                    </div>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {navItems
-                        .filter((item) => ['onboarding', 'recharges', 'billing'].includes(item.id))
-                        .map((item) => {
-                          const Icon = item.icon;
-                          const active = activeTab === item.id;
-                          return (
-                            <button
-                              key={`hub-${item.id}`}
-                              type="button"
-                              onClick={() => {
-                                handleTabChange(item.id);
-                                setMobileHubOpen(false);
-                              }}
-                              className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition active:scale-98 ${
-                                active
-                                  ? 'bg-gradient-to-br from-[#0A1B3F] to-[#122b5e] text-white border-[#0A1B3F] shadow-md'
-                                  : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/80 text-slate-900'
-                              }`}
-                            >
-                              <div
-                                className={`p-2 rounded-xl shrink-0 ${
-                                  active ? 'bg-[#F2591F] text-white' : 'bg-white text-[#0A1B3F] shadow-xs'
-                                }`}
-                              >
-                                <Icon className="w-4 h-4" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-1">
-                                  <span className="text-xs font-bold truncate">{item.label}</span>
-                                  {item.badge !== undefined && item.badge > 0 && (
-                                    <span
-                                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-black shrink-0 ${
-                                        active ? 'bg-[#F2591F] text-white' : 'bg-rose-500 text-white'
-                                      }`}
-                                    >
-                                      {item.badge}
-                                    </span>
-                                  )}
-                                </div>
-                                <span className={`text-[10px] block mt-0.5 line-clamp-1 ${active ? 'text-slate-300' : 'text-slate-500'}`}>
-                                  {item.shortLabel || item.label}
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. Communication & Support */}
-                <div>
-                  <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1 flex items-center gap-1.5">
-                    <Headphones className="w-3.5 h-3.5 text-emerald-500" /> Support &amp; Communication
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {navItems
-                      .filter((item) => ['chat', 'tickets', 'errors'].includes(item.id))
-                      .map((item) => {
-                        const Icon = item.icon;
-                        const active = activeTab === item.id;
-                        return (
-                          <button
-                            key={`hub-${item.id}`}
-                            type="button"
-                            onClick={() => {
-                              handleTabChange(item.id);
-                              setMobileHubOpen(false);
-                            }}
-                            className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition active:scale-98 ${
-                              active
-                                ? 'bg-gradient-to-br from-[#0A1B3F] to-[#122b5e] text-white border-[#0A1B3F] shadow-md'
-                                : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/80 text-slate-900'
-                            }`}
-                          >
-                            <div
-                              className={`p-2 rounded-xl shrink-0 ${
-                                active ? 'bg-[#F2591F] text-white' : 'bg-white text-[#0A1B3F] shadow-xs'
-                              }`}
-                            >
-                              <Icon className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-1">
-                                <span className="text-xs font-bold truncate">{item.label}</span>
-                                {item.badge !== undefined && item.badge > 0 && (
-                                  <span
-                                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-black shrink-0 ${
-                                      active ? 'bg-[#F2591F] text-white' : 'bg-rose-500 text-white'
-                                    }`}
-                                  >
-                                    {item.badge}
-                                  </span>
-                                )}
-                              </div>
-                              <span className={`text-[10px] block mt-0.5 line-clamp-1 ${active ? 'text-slate-300' : 'text-slate-500'}`}>
-                                {item.shortLabel || item.label}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                  </div>
-                </div>
-
-                {/* 4. Administration (for Admin) */}
-                {currentUser.role === 'ADMIN' && (
-                  <div>
-                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1 flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-purple-500" /> Admin Tools
-                    </div>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {navItems
-                        .filter((item) => ['teams'].includes(item.id))
-                        .map((item) => {
-                          const Icon = item.icon;
-                          const active = activeTab === item.id;
-                          return (
-                            <button
-                              key={`hub-${item.id}`}
-                              type="button"
-                              onClick={() => {
-                                handleTabChange(item.id);
-                                setMobileHubOpen(false);
-                              }}
-                              className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition active:scale-98 ${
-                                active
-                                  ? 'bg-gradient-to-br from-[#0A1B3F] to-[#122b5e] text-white border-[#0A1B3F] shadow-md'
-                                  : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/80 text-slate-900'
-                              }`}
-                            >
-                              <div
-                                className={`p-2 rounded-xl shrink-0 ${
-                                  active ? 'bg-[#F2591F] text-white' : 'bg-white text-[#0A1B3F] shadow-xs'
-                                }`}
-                              >
-                                <Icon className="w-4 h-4" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <span className="text-xs font-bold block truncate">{item.label}</span>
-                                <span className={`text-[10px] block mt-0.5 line-clamp-1 ${active ? 'text-slate-300' : 'text-slate-500'}`}>
-                                  Team Mapping
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
-
-                      {/* Backup & Audit Logs Button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBackupLogsOpen(true);
-                          setMobileHubOpen(false);
-                        }}
-                        className="p-3 rounded-2xl border border-slate-200/80 bg-slate-50/80 hover:bg-slate-100/80 text-slate-900 text-left flex items-start gap-2.5 transition active:scale-98"
+            {/* Visual App Icon Grid (Phone App Style - Zero Text Clutter) */}
+            <div className="p-4 overflow-y-auto space-y-4 pb-8">
+              <div className="grid grid-cols-4 gap-y-4 gap-x-2 pt-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const style = APP_ICON_STYLES[item.id] || { bg: 'from-slate-700 to-slate-900', text: 'text-white' };
+                  const active = activeTab === item.id;
+                  return (
+                    <button
+                      key={`hub-${item.id}`}
+                      type="button"
+                      onClick={() => {
+                        handleTabChange(item.id);
+                        setMobileHubOpen(false);
+                      }}
+                      className="flex flex-col items-center group active:scale-90 transition text-center"
+                    >
+                      <div className="relative">
+                        <div
+                          className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${style.bg} ${style.text} flex items-center justify-center shadow-md transition-transform group-hover:scale-105 ${
+                            active ? 'ring-3 ring-[#F2591F] ring-offset-2' : ''
+                          }`}
+                        >
+                          <Icon className="w-6 h-6" />
+                        </div>
+                        {item.badge !== undefined && item.badge > 0 && (
+                          <span className="absolute -top-1 -right-1 px-1.5 min-w-[18px] h-4.5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-md border-2 border-white">
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`text-[11px] font-bold mt-1.5 leading-tight tracking-tight line-clamp-1 max-w-[72px] ${
+                          active ? 'text-[#F2591F] font-black' : 'text-slate-800'
+                        }`}
                       >
-                        <div className="p-2 rounded-xl bg-white text-indigo-600 shadow-xs shrink-0">
-                          <Database className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs font-bold block truncate">Backups &amp; Logs</span>
-                          <span className="text-[10px] text-slate-500 block mt-0.5 line-clamp-1">Audit trail</span>
-                        </div>
-                      </button>
+                        {item.shortLabel || item.label.split(' ')[0]}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                {/* Admin Audit & Backup Logs Icon Tile */}
+                {currentUser.role === 'ADMIN' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBackupLogsOpen(true);
+                      setMobileHubOpen(false);
+                    }}
+                    className="flex flex-col items-center group active:scale-90 transition text-center"
+                  >
+                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center shadow-md transition-transform group-hover:scale-105">
+                      <Database className="w-6 h-6" />
                     </div>
-                  </div>
+                    <span className="text-[11px] font-bold mt-1.5 leading-tight tracking-tight text-slate-800 line-clamp-1 max-w-[72px]">
+                      Backups
+                    </span>
+                  </button>
                 )}
               </div>
 
-              {/* Bottom Mobile Action Buttons */}
-              <div className="pt-2 border-t border-slate-200 space-y-2">
+              {/* Bottom Quick Actions (Minimalist & Clean) */}
+              <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={phoneNotifStatus === 'granted' ? handleTestPhoneNotification : handleEnablePhoneNotifications}
-                  className={`w-full py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition ${
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition ${
                     phoneNotifStatus === 'granted'
                       ? 'border-blue-200 bg-blue-50 text-blue-700'
                       : 'border-amber-300 bg-amber-50 text-amber-800'
                   }`}
                 >
-                  <BellRing className="w-4 h-4" />
-                  <span>
-                    {phoneNotifStatus === 'granted' ? '📲 Test Phone Alert (Vibrate & Sound)' : '🔔 Enable Phone Alerts on Mobile'}
+                  <BellRing className="w-4 h-4 shrink-0" />
+                  <span className="truncate">
+                    {phoneNotifStatus === 'granted' ? 'Alerts ON' : 'Turn ON Alerts'}
                   </span>
                 </button>
+
+                {!isStandalone ? (
+                  <button
+                    type="button"
+                    onClick={handleInstallApp}
+                    className="py-2 px-3 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 transition"
+                  >
+                    <Smartphone className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="truncate">Install App</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="py-2 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center justify-center gap-1.5 transition"
+                  >
+                    <LogOut className="w-4 h-4 shrink-0" />
+                    <span>Logout</span>
+                  </button>
+                )}
 
                 {!isStandalone && (
                   <button
                     type="button"
-                    onClick={handleInstallApp}
-                    className="w-full py-2.5 px-3 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center justify-center gap-2 transition"
+                    onClick={handleLogout}
+                    className="col-span-2 py-2 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center justify-center gap-1.5 transition"
                   >
-                    <Smartphone className="w-4 h-4 text-emerald-600" />
-                    <span>Install App on Home Screen (PWA)</span>
+                    <LogOut className="w-4 h-4 shrink-0" />
+                    <span>Logout from CRM</span>
                   </button>
                 )}
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full py-2.5 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center justify-center gap-2 transition"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Logout from Session</span>
-                </button>
               </div>
             </div>
           </div>
