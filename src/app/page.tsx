@@ -29,6 +29,7 @@ import {
   Database,
   Smartphone,
   FileText,
+  Grid,
 } from 'lucide-react';
 import { BackupLogsModal } from '@/components/BackupLogsModal';
 import { QuotationsSection } from '@/components/QuotationsSection';
@@ -78,6 +79,7 @@ export default function CrmAppPage() {
   } | null>(null);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileHubOpen, setMobileHubOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [backupLogsOpen, setBackupLogsOpen] = useState(false);
@@ -531,6 +533,7 @@ export default function CrmAppPage() {
   const allNavItems: Array<{
     id: NavTab;
     label: string;
+    shortLabel?: string;
     icon: React.ComponentType<{ className?: string }>;
     badge?: number;
     visible: boolean;
@@ -538,39 +541,9 @@ export default function CrmAppPage() {
     {
       id: 'overview',
       label: 'Dashboard Overview',
+      shortLabel: 'Overview',
       icon: LayoutDashboard,
       visible: true,
-    },
-    {
-      id: 'chat',
-      label: 'Team Chat',
-      icon: MessageSquare,
-      badge: unreadChatCount,
-      visible: true,
-    },
-    {
-      id: 'sales',
-      label: role === 'AGENT' ? 'My Sales & Outstanding' : 'Sales & Collection',
-      icon: BarChart3,
-      visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
-    },
-    {
-      id: 'quotations',
-      label: 'Quotation App',
-      icon: FileText,
-      visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
-    },
-    {
-      id: 'teams',
-      label: 'Teams & User Mapping',
-      icon: ShieldCheck,
-      visible: role === 'ADMIN',
-    },
-    {
-      id: 'errors',
-      label: 'Error Code Hub',
-      icon: ShieldCheck,
-      visible: role === 'SUPPORT' || role === 'ADMIN',
     },
     {
       id: 'leads',
@@ -578,6 +551,7 @@ export default function CrmAppPage() {
         role === 'ADMIN' || role === 'ACCOUNT_MANAGER'
           ? 'Leads & Distribution'
           : 'My Assigned Leads',
+      shortLabel: 'Leads',
       icon: Users,
       badge:
         role === 'ADMIN' || role === 'ACCOUNT_MANAGER'
@@ -586,14 +560,39 @@ export default function CrmAppPage() {
       visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
     },
     {
-      id: 'inbox',
-      label: 'Mail Inbox',
-      icon: Mail,
-      visible: false,
+      id: 'chat',
+      label: 'Team Chat',
+      shortLabel: 'Chat',
+      icon: MessageSquare,
+      badge: unreadChatCount,
+      visible: true,
+    },
+    {
+      id: 'quotations',
+      label: 'Quotation App',
+      shortLabel: 'Quotes',
+      icon: FileText,
+      visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
+    },
+    {
+      id: 'sales',
+      label: role === 'AGENT' ? 'My Sales & Outstanding' : 'Sales & Collection',
+      shortLabel: 'Sales',
+      icon: BarChart3,
+      visible: role === 'ADMIN' || role === 'ACCOUNT_MANAGER' || role === 'AGENT',
+    },
+    {
+      id: 'tickets',
+      label: 'Ticket Rise',
+      shortLabel: 'Tickets',
+      icon: Headphones,
+      badge: (db.supportTickets || []).filter((t) => t.status !== 'RESOLVED').length,
+      visible: true,
     },
     {
       id: 'reminders',
       label: 'Callback Reminders',
+      shortLabel: 'Reminders',
       icon: AlarmClock,
       badge: dueRemindersCount,
       visible: true,
@@ -601,6 +600,7 @@ export default function CrmAppPage() {
     {
       id: 'meets',
       label: role === 'SUPPORT' ? 'Support Meet Schedule' : 'Meet Scheduling',
+      shortLabel: 'Meets',
       icon: CalendarCheck,
       badge:
         role === 'SUPPORT'
@@ -614,6 +614,7 @@ export default function CrmAppPage() {
         role === 'SUPPORT'
           ? 'Account Creation (Masked)'
           : 'Client Onboarding',
+      shortLabel: 'Onboard',
       icon: UserPlus,
       badge:
         role === 'SUPPORT'
@@ -632,6 +633,7 @@ export default function CrmAppPage() {
           : role === 'BILLING'
           ? 'Recharge & Tally Queue'
           : 'Recharge Requests',
+      shortLabel: 'Recharge',
       icon: Wallet,
       badge:
         role === 'SUPPORT'
@@ -647,15 +649,9 @@ export default function CrmAppPage() {
       visible: true,
     },
     {
-      id: 'tickets',
-      label: 'Ticket Rise',
-      icon: Headphones,
-      badge: (db.supportTickets || []).filter((t) => t.status !== 'RESOLVED').length,
-      visible: true,
-    },
-    {
       id: 'billing',
       label: 'Billing & Tax Invoices',
+      shortLabel: 'Billing',
       icon: Receipt,
       badge:
         role === 'BILLING' || role === 'ADMIN'
@@ -665,8 +661,58 @@ export default function CrmAppPage() {
           : undefined,
       visible: role !== 'SUPPORT',
     },
+    {
+      id: 'errors',
+      label: 'Error Code Hub',
+      shortLabel: 'Error Hub',
+      icon: ShieldCheck,
+      visible: role === 'SUPPORT' || role === 'ADMIN',
+    },
+    {
+      id: 'teams',
+      label: 'Teams & User Mapping',
+      shortLabel: 'Teams',
+      icon: ShieldCheck,
+      visible: role === 'ADMIN',
+    },
+    {
+      id: 'inbox',
+      label: 'Mail Inbox',
+      shortLabel: 'Inbox',
+      icon: Mail,
+      visible: false,
+    },
   ];
   const navItems = allNavItems.filter((item) => item.visible);
+
+  const primaryMobileNavItems = useMemo(() => {
+    let preferredIds: NavTab[] = [];
+    if (role === 'AGENT') {
+      preferredIds = ['leads', 'overview', 'chat', 'quotations'];
+    } else if (role === 'SUPPORT') {
+      preferredIds = ['tickets', 'meets', 'chat', 'errors'];
+    } else if (role === 'BILLING') {
+      preferredIds = ['billing', 'recharges', 'chat', 'reminders'];
+    } else {
+      // ADMIN / ACCOUNT_MANAGER
+      preferredIds = ['overview', 'leads', 'sales', 'chat'];
+    }
+    const map = new Map(navItems.map((item) => [item.id, item]));
+    const list: typeof navItems = [];
+    for (const id of preferredIds) {
+      const it = map.get(id);
+      if (it) list.push(it);
+    }
+    if (list.length < 4) {
+      for (const item of navItems) {
+        if (!list.some((l) => l.id === item.id)) {
+          list.push(item);
+          if (list.length === 4) break;
+        }
+      }
+    }
+    return list;
+  }, [role, navItems]);
 
   return (
     <div className="min-h-screen flex bg-[#F8FAFC] text-slate-900">
@@ -789,7 +835,7 @@ export default function CrmAppPage() {
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-3 sm:px-4 lg:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <button
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => setMobileHubOpen(true)}
               className="lg:hidden p-2 rounded-xl border border-slate-200 text-[#0A1B3F] hover:bg-slate-50 shrink-0"
               aria-label="Open menu"
             >
@@ -803,9 +849,14 @@ export default function CrmAppPage() {
                 alt="Immense Air"
                 className="w-7 h-7 rounded-lg object-contain border border-slate-200 bg-white shrink-0"
               />
-              <span className="font-black text-xs tracking-tight text-[#0A1B3F] truncate">
-                IMMENSE <span className="text-[#F2591F]">AIR</span>
-              </span>
+              <div className="flex flex-col min-w-0 leading-tight">
+                <span className="font-black text-xs tracking-tight text-[#0A1B3F] truncate">
+                  IMMENSE <span className="text-[#F2591F]">AIR</span>
+                </span>
+                <span className="text-[9px] font-extrabold text-[#F2591F] uppercase tracking-wider">
+                  {ROLE_META[currentUser.role]?.short || currentUser.role}
+                </span>
+              </div>
             </div>
             <div className="hidden sm:flex items-center gap-2">
               <CuteAgentAvatar size={28} />
@@ -1340,8 +1391,8 @@ export default function CrmAppPage() {
       </div>
 
       {/* Mobile Bottom Quick Navigation Bar (Phone Friendly) */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_20px_rgba(10,27,63,0.08)]">
-        {navItems.slice(0, 4).map((item) => {
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-2 py-1.5 flex items-center justify-around shadow-[0_-4px_25px_rgba(10,27,63,0.08)]">
+        {primaryMobileNavItems.map((item) => {
           const Icon = item.icon;
           const active = activeTab === item.id;
           return (
@@ -1349,17 +1400,19 @@ export default function CrmAppPage() {
               key={`mob-${item.id}`}
               type="button"
               onClick={() => handleTabChange(item.id)}
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[60px] transition relative ${
-                active ? 'text-[#F2591F]' : 'text-[#0A1B3F]/70 hover:text-[#0A1B3F]'
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[58px] transition relative active:scale-95 ${
+                active ? 'text-[#F2591F] font-bold' : 'text-slate-500 hover:text-[#0A1B3F]'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              <span className="text-[10px] font-bold mt-0.5 truncate max-w-[68px]">
-                {item.label.split(' ')[0]}
+              <div className={`p-1 rounded-xl transition ${active ? 'bg-[#F2591F]/10' : ''}`}>
+                <Icon className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-bold mt-0.5 tracking-tight truncate max-w-[62px]">
+                {item.shortLabel || item.label.split(' ')[0]}
               </span>
               {item.badge !== undefined && item.badge > 0 && (
-                <span className="absolute top-0.5 right-2 px-1 min-w-[14px] h-3.5 rounded-full bg-[#F2591F] text-white text-[9px] font-black flex items-center justify-center">
-                  {item.badge > 9 ? '9+' : item.badge}
+                <span className="absolute top-0 right-2 px-1 min-w-[15px] h-3.5 rounded-full bg-[#F2591F] text-white text-[9px] font-black flex items-center justify-center shadow-xs">
+                  {item.badge > 99 ? '99+' : item.badge}
                 </span>
               )}
             </button>
@@ -1367,13 +1420,338 @@ export default function CrmAppPage() {
         })}
         <button
           type="button"
-          onClick={() => setSidebarOpen(true)}
-          className="flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[60px] text-[#0A1B3F]/70 hover:text-[#0A1B3F]"
+          onClick={() => setMobileHubOpen(true)}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[58px] transition active:scale-95 ${
+            mobileHubOpen ? 'text-[#0A1B3F] font-bold' : 'text-slate-500 hover:text-[#0A1B3F]'
+          }`}
         >
-          <Menu className="w-4 h-4" />
-          <span className="text-[10px] font-bold mt-0.5">More</span>
+          <div className="p-1 rounded-xl bg-slate-100 text-[#0A1B3F]">
+            <Grid className="w-5 h-5" />
+          </div>
+          <span className="text-[10px] font-bold mt-0.5 tracking-tight">All Apps</span>
         </button>
       </nav>
+
+      {/* Mobile "All Apps" Hub Drawer (Phone Native App Launcher) */}
+      {mobileHubOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-[#0A1B3F]/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileHubOpen(false)}
+          />
+
+          {/* Sheet Container */}
+          <div className="relative bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden border-t border-slate-200">
+            {/* Sheet Handle */}
+            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
+            {/* Header */}
+            <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <CuteAgentAvatar size={36} />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-slate-900">{currentUser.name}</span>
+                    <span className="px-2 py-0.5 rounded-md bg-[#F2591F]/10 text-[#F2591F] text-[10px] font-black uppercase">
+                      {ROLE_META[currentUser.role]?.short || currentUser.role}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-medium">
+                    {currentUser.teamId
+                      ? (db.teams || []).find((t) => t.id === currentUser.teamId)?.name || currentUser.teamId
+                      : 'Immense Air Workspace'}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMobileHubOpen(false)}
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Feature Grid */}
+            <div className="p-4 overflow-y-auto space-y-4 pb-12">
+              {/* Categorized Features */}
+              <div className="space-y-4">
+                {/* 1. Core & Sales */}
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1 flex items-center gap-1.5">
+                    <BarChart3 className="w-3.5 h-3.5 text-[#F2591F]" /> Sales &amp; Growth
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {navItems
+                      .filter((item) => ['overview', 'leads', 'quotations', 'sales', 'reminders', 'meets'].includes(item.id))
+                      .map((item) => {
+                        const Icon = item.icon;
+                        const active = activeTab === item.id;
+                        return (
+                          <button
+                            key={`hub-${item.id}`}
+                            type="button"
+                            onClick={() => {
+                              handleTabChange(item.id);
+                              setMobileHubOpen(false);
+                            }}
+                            className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition active:scale-98 ${
+                              active
+                                ? 'bg-gradient-to-br from-[#0A1B3F] to-[#122b5e] text-white border-[#0A1B3F] shadow-md'
+                                : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/80 text-slate-900'
+                            }`}
+                          >
+                            <div
+                              className={`p-2 rounded-xl shrink-0 ${
+                                active ? 'bg-[#F2591F] text-white' : 'bg-white text-[#0A1B3F] shadow-xs'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-xs font-bold truncate">{item.label}</span>
+                                {item.badge !== undefined && item.badge > 0 && (
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-black shrink-0 ${
+                                      active ? 'bg-[#F2591F] text-white' : 'bg-rose-500 text-white'
+                                    }`}
+                                  >
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`text-[10px] block mt-0.5 line-clamp-1 ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+                                {item.shortLabel || item.label}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* 2. Operations & Billing */}
+                {navItems.some((item) => ['onboarding', 'recharges', 'billing'].includes(item.id)) && (
+                  <div>
+                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1 flex items-center gap-1.5">
+                      <Receipt className="w-3.5 h-3.5 text-indigo-500" /> Operations &amp; Billing
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {navItems
+                        .filter((item) => ['onboarding', 'recharges', 'billing'].includes(item.id))
+                        .map((item) => {
+                          const Icon = item.icon;
+                          const active = activeTab === item.id;
+                          return (
+                            <button
+                              key={`hub-${item.id}`}
+                              type="button"
+                              onClick={() => {
+                                handleTabChange(item.id);
+                                setMobileHubOpen(false);
+                              }}
+                              className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition active:scale-98 ${
+                                active
+                                  ? 'bg-gradient-to-br from-[#0A1B3F] to-[#122b5e] text-white border-[#0A1B3F] shadow-md'
+                                  : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/80 text-slate-900'
+                              }`}
+                            >
+                              <div
+                                className={`p-2 rounded-xl shrink-0 ${
+                                  active ? 'bg-[#F2591F] text-white' : 'bg-white text-[#0A1B3F] shadow-xs'
+                                }`}
+                              >
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-xs font-bold truncate">{item.label}</span>
+                                  {item.badge !== undefined && item.badge > 0 && (
+                                    <span
+                                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-black shrink-0 ${
+                                        active ? 'bg-[#F2591F] text-white' : 'bg-rose-500 text-white'
+                                      }`}
+                                    >
+                                      {item.badge}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className={`text-[10px] block mt-0.5 line-clamp-1 ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+                                  {item.shortLabel || item.label}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Communication & Support */}
+                <div>
+                  <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1 flex items-center gap-1.5">
+                    <Headphones className="w-3.5 h-3.5 text-emerald-500" /> Support &amp; Communication
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {navItems
+                      .filter((item) => ['chat', 'tickets', 'errors'].includes(item.id))
+                      .map((item) => {
+                        const Icon = item.icon;
+                        const active = activeTab === item.id;
+                        return (
+                          <button
+                            key={`hub-${item.id}`}
+                            type="button"
+                            onClick={() => {
+                              handleTabChange(item.id);
+                              setMobileHubOpen(false);
+                            }}
+                            className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition active:scale-98 ${
+                              active
+                                ? 'bg-gradient-to-br from-[#0A1B3F] to-[#122b5e] text-white border-[#0A1B3F] shadow-md'
+                                : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/80 text-slate-900'
+                            }`}
+                          >
+                            <div
+                              className={`p-2 rounded-xl shrink-0 ${
+                                active ? 'bg-[#F2591F] text-white' : 'bg-white text-[#0A1B3F] shadow-xs'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-xs font-bold truncate">{item.label}</span>
+                                {item.badge !== undefined && item.badge > 0 && (
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-black shrink-0 ${
+                                      active ? 'bg-[#F2591F] text-white' : 'bg-rose-500 text-white'
+                                    }`}
+                                  >
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`text-[10px] block mt-0.5 line-clamp-1 ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+                                {item.shortLabel || item.label}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* 4. Administration (for Admin) */}
+                {currentUser.role === 'ADMIN' && (
+                  <div>
+                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1 flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-500" /> Admin Tools
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {navItems
+                        .filter((item) => ['teams'].includes(item.id))
+                        .map((item) => {
+                          const Icon = item.icon;
+                          const active = activeTab === item.id;
+                          return (
+                            <button
+                              key={`hub-${item.id}`}
+                              type="button"
+                              onClick={() => {
+                                handleTabChange(item.id);
+                                setMobileHubOpen(false);
+                              }}
+                              className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition active:scale-98 ${
+                                active
+                                  ? 'bg-gradient-to-br from-[#0A1B3F] to-[#122b5e] text-white border-[#0A1B3F] shadow-md'
+                                  : 'bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/80 text-slate-900'
+                              }`}
+                            >
+                              <div
+                                className={`p-2 rounded-xl shrink-0 ${
+                                  active ? 'bg-[#F2591F] text-white' : 'bg-white text-[#0A1B3F] shadow-xs'
+                                }`}
+                              >
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="text-xs font-bold block truncate">{item.label}</span>
+                                <span className={`text-[10px] block mt-0.5 line-clamp-1 ${active ? 'text-slate-300' : 'text-slate-500'}`}>
+                                  Team Mapping
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+
+                      {/* Backup & Audit Logs Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBackupLogsOpen(true);
+                          setMobileHubOpen(false);
+                        }}
+                        className="p-3 rounded-2xl border border-slate-200/80 bg-slate-50/80 hover:bg-slate-100/80 text-slate-900 text-left flex items-start gap-2.5 transition active:scale-98"
+                      >
+                        <div className="p-2 rounded-xl bg-white text-indigo-600 shadow-xs shrink-0">
+                          <Database className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-bold block truncate">Backups &amp; Logs</span>
+                          <span className="text-[10px] text-slate-500 block mt-0.5 line-clamp-1">Audit trail</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Mobile Action Buttons */}
+              <div className="pt-2 border-t border-slate-200 space-y-2">
+                <button
+                  type="button"
+                  onClick={phoneNotifStatus === 'granted' ? handleTestPhoneNotification : handleEnablePhoneNotifications}
+                  className={`w-full py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition ${
+                    phoneNotifStatus === 'granted'
+                      ? 'border-blue-200 bg-blue-50 text-blue-700'
+                      : 'border-amber-300 bg-amber-50 text-amber-800'
+                  }`}
+                >
+                  <BellRing className="w-4 h-4" />
+                  <span>
+                    {phoneNotifStatus === 'granted' ? '📲 Test Phone Alert (Vibrate & Sound)' : '🔔 Enable Phone Alerts on Mobile'}
+                  </span>
+                </button>
+
+                {!isStandalone && (
+                  <button
+                    type="button"
+                    onClick={handleInstallApp}
+                    className="w-full py-2.5 px-3 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center justify-center gap-2 transition"
+                  >
+                    <Smartphone className="w-4 h-4 text-emerald-600" />
+                    <span>Install App on Home Screen (PWA)</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full py-2.5 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center justify-center gap-2 transition"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout from Session</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin Backup & Activity Logs Modal */}
       {backupLogsOpen && currentUser && (
