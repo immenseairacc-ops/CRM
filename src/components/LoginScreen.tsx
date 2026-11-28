@@ -145,10 +145,10 @@ export function LoginScreen({
         <div className="bg-[#0A1B3F] px-6 py-6 text-white relative overflow-hidden">
           <div className="absolute -right-10 -top-10 w-36 h-36 rounded-full bg-[#F2591F]/20 blur-2xl pointer-events-none" />
           <div className="flex items-center gap-3.5 relative z-10">
-            <div className="w-14 h-14 rounded-2xl bg-white p-1 shadow-lg shrink-0 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-white p-1.5 shadow-lg shrink-0 flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/immense-logo.jpg"
+                src="/icon-192.png"
                 alt="Immense Air Pvt Ltd"
                 className="w-full h-full object-contain rounded-xl"
               />

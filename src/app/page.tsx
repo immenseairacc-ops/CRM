@@ -497,9 +497,9 @@ export default function CrmAppPage() {
             <div className="absolute inset-0 rounded-2xl border-4 border-[#F2591F]/25 border-t-[#F2591F] animate-spin" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/immense-logo.jpg"
+              src="/icon-192.png"
               alt="Immense Air Pvt Ltd"
-              className="w-14 h-14 rounded-xl object-contain bg-white p-1 shadow-sm"
+              className="w-14 h-14 rounded-2xl object-contain bg-white p-1.5 shadow-sm"
             />
           </div>
           <p className="text-xs font-bold text-[#0A1B3F] tracking-wide">
@@ -522,9 +522,9 @@ export default function CrmAppPage() {
             <div className="absolute inset-0 rounded-2xl border-4 border-[#F2591F]/25 border-t-[#F2591F] animate-spin" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/immense-logo.jpg"
+              src="/icon-192.png"
               alt="Immense Air Pvt Ltd"
-              className="w-14 h-14 rounded-xl object-contain bg-white p-1 shadow-sm"
+              className="w-14 h-14 rounded-2xl object-contain bg-white p-1.5 shadow-sm"
             />
           </div>
           <p className="text-xs font-bold text-[#0A1B3F] tracking-wide">
@@ -752,7 +752,7 @@ export default function CrmAppPage() {
             <div className="w-10 h-10 rounded-xl bg-white p-1 shadow-md shrink-0 flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/immense-logo.jpg"
+                src="/icon-192.png"
                 alt="Immense Air Pvt Ltd"
                 className="w-full h-full object-contain rounded-lg"
               />
@@ -862,9 +862,9 @@ export default function CrmAppPage() {
             <div className="flex lg:hidden items-center gap-2 min-w-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/immense-logo.jpg"
+                src="/icon-192.png"
                 alt="Immense Air"
-                className="w-7 h-7 rounded-lg object-contain border border-slate-200 bg-white shrink-0"
+                className="w-8 h-8 rounded-xl object-contain border border-slate-200/90 bg-white shadow-2xs p-0.5 shrink-0"
               />
               <div className="flex flex-col min-w-0 leading-tight">
                 <span className="font-black text-xs tracking-tight text-[#0A1B3F] truncate">
@@ -1470,9 +1470,9 @@ export default function CrmAppPage() {
               <div className="flex items-center gap-2.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/immense-logo.jpg"
+                  src="/icon-192.png"
                   alt="Immense Air"
-                  className="w-8 h-8 rounded-xl object-contain border border-slate-200 bg-white shadow-xs shrink-0"
+                  className="w-8 h-8 rounded-xl object-contain border border-slate-200/90 bg-white shadow-2xs p-0.5 shrink-0"
                 />
                 <div>
                   <div className="flex items-center gap-1.5">

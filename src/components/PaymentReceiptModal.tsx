@@ -193,9 +193,9 @@ _Support Desk: support@immenseair.in | Accounts: billing@immenseair.in_`;
               <div className="flex items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/immense-logo.jpg"
+                  src="/icon-192.png"
                   alt="Immense Air Logo"
-                  className="w-12 h-12 rounded-xl object-contain border border-slate-200"
+                  className="w-12 h-12 rounded-xl object-contain border border-slate-200 bg-white p-1"
                 />
                 <div>
                   <h1 className="text-xl font-extrabold text-slate-900 tracking-tight leading-none">
